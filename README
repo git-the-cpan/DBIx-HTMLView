@@ -1,0 +1,57 @@
+HTMLView - For creating web userinterfaces to DBI databases.
+(c) Copyright 1998 Hakan Ardo <hakan@debian.org>
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+
+Description
+-----------
+
+This is a general propose module to simplify the creation of web
+userinterfaces to a DBI database, currently it can list, view, add,
+edit and delete entries in the databse using either <input ...> or
+<textarea> to gather the info.
+
+It can also edit N2N relations between two tabels using a third table
+to represent the connections.
+
+It's actions is highy customizable by using a database definition 
+where most things are specified and by beeing designed to easily 
+allow subclassing in order to change it's behaviour.
+
+It is constructed as a set of objects that could be considered 
+editors or viewers. Those objects can either be used as they are
+or be subclassed if they can be customized enough for your needs.
+See the View.cgi example for the simples posible use that gields a 
+quite powerfull cgi based editor.
+
+Se the documentation for DBIx::HTMLView for a more detailed 
+description and the docs on the sub class to find the properties of
+the diffrent editors.
+
+To use this with your databases you need a DBI interface to your 
+database. DBI can be found at CPAN together with a driver located 
+in DBD.
+
+Build and Install
+-----------------
+
+All you have to do to build, test and install this stuff is:
+
+perl Makefile.pl
+make
+make test
+make install
+
+
