@@ -56,9 +56,7 @@ which can be done in several ways:
    those arguments.
 2. If $data is an array reference, $sth is supposed to be the object 
    returned by a DBI execude call with a select command, and $data should 
-   be the array ref with the data you want to create a post object of. If
-   the same fieldname apperas twice in the select the first one is 
-   presumed to be the one belonging to this post.
+   be the array ref with the data you want to create a post object of.
 3. If $data is a hash reference, it is supposed to contain Fld/Value 
    pairs.
 4. If $datat is CGI object the CGI params is supposed to be Fld/Value 
@@ -82,11 +80,9 @@ sub new {
 		if (ref $data eq "ARRAY") {
 			my $cnt=0;
 			foreach (@{$sth->{'NAME'}}) {
-				if (! $self->got_fld($_)) { # As we only want the first one
-					my $a=$self->tab->new_fld($_,$data->[$cnt]);
-					$self->set($_, $a);			
-					$cnt++;
-				}
+				my $a=$self->tab->new_fld($_,$data->[$cnt]);
+				$self->set($_, $a);			
+				$cnt++;
 			}
 		} elsif (ref $data eq "HASH") {
 			foreach (keys %$data) {

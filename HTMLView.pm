@@ -79,7 +79,7 @@ package DBIx::HTMLView;
 use strict;
 use vars qw(@ISA $VERSION @EXPORT);
 
-$VERSION="0.6.1";
+$VERSION="0.6";
 
 require Exporter;
 require DBIx::HTMLView::DB;

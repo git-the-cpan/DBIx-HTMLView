@@ -34,9 +34,9 @@ all users belonging to the group named sudo while "grp->gid = 27" would
 match all users belonging to the group with gid 27).
 
 There is also a fmt language used to specify how the data in a post
-or a set of posts should be presented. It works in a template like way
-with a html like format, and it can be specified on a PostSet, Post or
-Relation/Field level.
+should be presented. It works in a template like way with a html like
+format, and it can be specified on a PostSet, Post or Relation/Field
+level.
 
 It's most frequent use is that it allows you to write a fmt file and
 in it place a "<node>...</node>" construct, which will repeat the
@@ -51,12 +51,6 @@ related posts should be presented.
 It's also possible to insert perl code that's executed using
 "<perl>...</perl>" constructs. Se the README.fmt file for a complete
 description of the language.
-
-For a simple example se the Test2.fmt file which will work together
-with the Test2 table from the set of test tabels used by test.pl. To
-view the content of the entire table, try:
-
-  Formated2.cgi?tab=Test2&fmt=Test2
 
 
 Build and Install

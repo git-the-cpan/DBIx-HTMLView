@@ -1,13 +1,17 @@
 Use order from definition in editors/viewers
+Extendet Tests and description on how to set up the test db.
+Public test Db server (not athena)
 Docs
 Formated editor/viewer with ->edit_html or ->view_html tied to %db
+Decide when to use confess/croak/die/...
 Autodetect order flds
 FIXME's
+N2One relations
 Time optimisations
 Security checks on read only fields
 Separate public and private methods in the docs
 Separate overriden methods describing only changes
-Make sure posts wont get extra fields from other tables defined on related selects
+Make sure data don't get mixed between tables on multitable select
 Save related data from multitable select to preven futher db calls
 Make $data in all Fld constructors case insensitive
 Add required require statements to the synopsis

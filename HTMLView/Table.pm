@@ -177,46 +177,6 @@ sub list {
 	$self->sql_list($select);
 }
 
-=head2 $table->noid_list($search, $extra, $flds)
-	
-Works in a simluar way that $table->list, but it will not add the id
-field to flds select, and it will do a distinct select. The posts
-returned are some kind of psevdo posts. If you try to modify and update 
-them and the new posts will be added to the db as they have no id.
-
-Will currently not work with relations (FIXME). It will never work with 
-N2N relations as they requier the id selected in order to find the 
-related posts.
-
-
-=cut
-
-sub noid_list {
-	my ($self, $search, $extra, $flds)=@_;
-	my $fld='';
-	my $select;
-
-	if (defined $flds) {
-		foreach (@$flds) {
-			my $n=$self->fld($_)->field_name;
-			if (defined $n){$fld.="$n, " ;}
-		}
-	} else {
-		$fld='*';
-	}
-	$fld =~ s/, $//g;
-
-	$select="select distinct $fld from " . $self->name;
-
-	if (defined $search) {
-		$select.=" where " . $search;
-	} 
-	if (defined $extra) {$select.=" " .$extra;}
-
-	$self->sql_list($select);
-}
-
-
 =head2 $table->sql_list($select)
 
 Sends $select, which should be a select clause on this table,to the 
@@ -227,8 +187,6 @@ You should use the list method insted. It gives you a smooter interface.
 
 sub sql_list {			
 	my ($self, $select)=@_;
-
-#	print "sel=$select\n";
 
  	my $sth=$self->db->send($select);	
 

@@ -44,11 +44,6 @@ eval {$dbi->send("drop table Test2_to_Test");};
 eval {$dbi->send("drop table Test3");};
 eval {$dbi->send("drop table Test4");};
 eval {$dbi->send("drop table Test4_to_Test2");};
-eval {$dbi->send("drop table Test1");};
-eval {$dbi->send("drop table Test1_to_Test");};
-eval {$dbi->send("drop table Test1_to_Test2");};
-eval {$dbi->send("drop table Test1_to_Test3");};
-eval {$dbi->send("drop table Test1_to_Test4");};
 
 # The db in the SQL server is now empty, so let's create the tables
 $dbi->sql_create;
@@ -123,6 +118,7 @@ test($hits->view_text eq "id: $id2\ntestf: 42\n\nid: $id3\ntestf: 13\n");
 # List all posts where the testf field is greater than 8 sorted by testf
 $hits=$tab->list("testf>8", "order by testf");
 test($hits->view_text eq "id: $id3\ntestf: 13\n\nid: $id2\ntestf: 42\n");
+
 
 # Delete a post
 $tab->del($id3);
@@ -207,9 +203,6 @@ test($tab2->list(undef, "order by id")->view_text eq
 		 "id: $id22\nstr: Another test post\nnr: \nLnk: 42, 13\n\n".
 		 "id: $id23\nstr: \nnr: 7\nLnk: \n");
 
-# List only the str field (and the id field)
-test($tab2->list(undef, "order by id", ["str"])->view_fmt('view_text',"<node><fld str>\n</node>") eq "A test post\nAnother test post\n\n");
-
 # Update post 1 to only be related to 7
 $post1->set('Lnk', [$id1]);
 $post1->update;
@@ -274,9 +267,6 @@ test($tab4->list->view_fmt('view_html',
 # List table with a custom three level fmt
 test($tab4->list->view_fmt('view_html',
 													 '<node><fld s>: <fmt Lnk><fld id>(<fld testf>)</fmt>: <fmt Link>[<node><fld str>: <fmt Lnk><node><fld testf>(<fld id>)</node></fmt>!</node>]</fmt>'."\n".'</node>') eq "This string is : $id1(7): []\nThis string is a test string: $id2(42): [A test post: 7($id1)!Another test post: !: 7($id1)42($id2)13($id3)!]\n");
-
-# Test noid_list 
-test($tab2->noid_list(undef, undef, ['nr'])->view_fmt('view_text', "<node><fld nr>, </node>\n") eq ", 7, \n");
 
 print "\nCGIView interface tests\n";
 $test_cnt=0;
@@ -443,6 +433,7 @@ test($tab2->list("Lnk->testf=42", "order by Test2.id")->view_text eq
 		 "id: $id21\nstr: A test post\nnr: 7\nLnk: 42, 13\n\n".
 		 "id: $id23\nstr: \nnr: 7\nLnk: 8, 42\n");
 
+
 # List all posts related to posts with testf 13 or 8
 test($tab2->list("Lnk->testf=13 OR Lnk->testf=8", 
 								 "order by Test2.id")->view_text eq 
@@ -459,46 +450,12 @@ test($tab2->list("Lnk->testf=77 OR (nr=7 AND Lnk->testf=13)",
 		 "id: $id21\nstr: A test post\nnr: 7\nLnk: 42, 13\n\n".
 		 "id: $id22\nstr: Another test post\nnr: \nLnk: 77\n");
 
-# Setting up Test1 (adding posts with only id fields)
-$tab1=$dbi->tab('Test1');
-$post=$tab1->new_post;
-$post->set('Lnk1', [$id4]);
-$post->set('Lnk2', [$id23]);
-$post->set('Lnk3', [$id32]);
-$post->set('Lnk4', [$id42]);
-$post->update;
-$id11=$post->id;
-
-$post=$tab1->new_post;
-$post->set('Lnk1', [$id1]);
-$post->set('Lnk2', [$id21]);
-$post->set('Lnk3', [$id31]);
-$post->set('Lnk4', [$id41]);
-$post->update;
-$id12=$post->id;
-
-$post=$tab1->new_post;
-$post->set('Lnk1', [$id4,$id2]);
-$post->set('Lnk2', [$id21,$id23]);
-$post->set('Lnk3', [$id31,$id32]);
-$post->set('Lnk4', [$id41,$id42]);
-$post->update;
-$id13=$post->id;
-
-# Change id only post
-$post->set('Lnk2', [$id21, $id22, $id23]);
-$post->update;
-
-# Select with several selected id fields
-test ($tab1->list("Lnk1->id=$id4 AND Lnk2->id=$id23 AND Lnk3->id=$id32 AND Lnk4->id=$id42")->view_text eq "Lnk1: $id4\nLnk2: $id23\nLnk3: $id32\nLnk4: $id42\nid: $id11\n\nLnk1: $id2, $id4\nLnk2: $id21, $id22, $id23\nLnk3: $id31, $id32\nLnk4: $id41, $id42\nid: 3\n");
 
 # List all posts related to posts with testf 13 and 42
 #test($tab2->list("Lnk->testf=13 AND Lnk->testf=42", 
 #								 "order by Test2.id")->view_text eq 
 #		 "id: 0\nstr: A test post\nnr: 7\nLnk: 42, 13\n");
 # FIXME: How should this be implemented in an SQL query??
-
-# FIXME: multilevel relational selects, eg Link->Lnk->testf = 7
 
 # List 
 

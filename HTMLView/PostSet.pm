@@ -87,12 +87,8 @@ sub new {
 # FIXME: Separate into a into_save_mode method and update Table::list docs.
 			while (my $ref = $sth->fetchrow_arrayref) {
 				my $post=$tab->new_post($ref,$sth);
-				if ($post->got_id) {
-					if (!$self->got_post($post)) {
-						$self->do_got_post($post);
-						$self->add($post);
-					}
-				} else {
+				if (!$self->got_post($post)) {
+					$self->do_got_post($post);
 					$self->add($post);
 				}
 			}
@@ -159,15 +155,11 @@ sub get_next {
 		my $ref;
 		if ($ref= $self->{'sth'}->fetchrow_arrayref) {
 			my $post=$self->tab->new_post($ref,$self->{'sth'});
-			if ($post->got_id) {
-				if (!$self->got_post($post)) {
-					$self->do_got_post($post);
-					return $post;
-				} else {
-					return $self->get_next;
-				}
-			} else {
+			if (!$self->got_post($post)) {
+				$self->do_got_post($post);
 				return $post;
+			} else {
+				return $self->get_next;
 			}
 		} else {
 			return undef;
@@ -274,7 +266,7 @@ sub view_fmt {
 	if (!defined $fmt) {$fmt=$self->tab->list_fmt($fmt_name)}
 
 	#FIXME: Use a real XML parser or some template package
-	while ($fmt =~ s/^(.*?)<sperl>(.*?)<\/sperl>/$1.eval($2)/geis) {}
+#	while ($fmt =~ s/^(.*?)<perl>(.*?)<\/perl>/$1.eval($2)/geis) {}
 	if ($fmt =~ /^(.*?)<node\s*(.*?)>(.*)<\/node>(.*)$/s) {
 		$head=$1; $node=$3; $foot=$4;
 		if ($2 =~ /^join\s*=\s*[\"\']?(.*?)[\"\']?$/s) {$join=$1}

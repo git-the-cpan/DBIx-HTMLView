@@ -1,15 +1,3 @@
-0.6.1
- * Fixed bug preventing adding, and updating posts with no other fields
-   than the id field.
- * Fixed bug that got fields from diffrent tabels with the same name 
-   mixed up when selecting related data. There still might be a
-   problem when not selecting all fields of a post, then the not
-   selected fields may show up as the fields with the same name from 
-   the other tabels that where selected.
- * Rewrote Test2.fmt to work with the new Formated2.cgi
- * Fixed bug in Formated2.cgi preventing the FLD param from working
- * Added Table::noid_list method
-
 0.6
  * Added N2One relations
  * An Int value set to "" will now be set to NULL in the db
