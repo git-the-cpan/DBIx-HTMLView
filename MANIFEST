@@ -10,6 +10,8 @@ Makefile.PL
 config.pm
 test.pl
 View.cgi
+editable_id.patch
+editable_id.README
 HTMLView.pm
 HTMLView/CGIListView.pm
 HTMLView/CGIQueryListView.pm
@@ -36,5 +38,16 @@ HTMLView/N2One.pm
 HTMLView/Fmt.pm
 HTMLView/Tree.pm
 HTMLView/Date.pm
-editable_id.patch
-editable_id.README
+HTMLView/SubTab.pm
+HTMLView/Order.pm
+HTMLView/N2NOrder.pm
+HTMLView/Log.pm
+HTMLView/OracleDB.pm
+comp2.pl
+fmt_srv.pl
+Test4_onSubmit.js
+s_Test4_onChange.js
+Apache/HTMLView.pm
+Apache/README
+README.compiled_fmt
+gen_act.pl

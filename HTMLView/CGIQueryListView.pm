@@ -128,8 +128,6 @@ EOF
     $res.=$p->view_fmt('view_html', $fmt);
   }
   
-  $hits->tab->set_viewer($self);
-
   }
   $res.='</td></tr></table>';
   $res;

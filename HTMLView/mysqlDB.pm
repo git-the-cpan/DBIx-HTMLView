@@ -54,7 +54,7 @@ sub insert {
   my $names="";
   my $cmd="insert into " . $tab->name;
 
-   foreach my $f ($post->fld_names) {
+  foreach my $f ($post->fld_names) {
     foreach ($post->fld($f)->name_vals) {
       $names .=  $_->{'name'}.", ";
       $values .= $_->{'val'}.", ";
@@ -74,7 +74,7 @@ sub insert {
   }      
   $post->set($tab->id->name, $insid);
 
-   foreach my $f ($post->fld_names) {
+  foreach my $f ($post->fld_names) {
     $post->fld($f)->post_updated;
   }
 }

@@ -1,3 +1,7 @@
+Here we give an overview of the fmt language. For a general overview
+of this system, see REDME. Also you'll probably want to use the
+compiled fmt's which contains support for even more tags described in 
+REDAME.compiled_fmt.
 
 General
 -------
@@ -83,6 +87,9 @@ which will be placed between the posts presentations. For example:
 
 will produce a comma separated list of posts, with the posts
 represented by the field Name.
+
+If no <node> </node> tags are specifed they are defaulting to include
+the entire fmt string.
 
 
 Named fmt's

@@ -101,9 +101,71 @@ sub new {
   }
 
   $self->{'name'}=$name;
+  #if (DBIx::HTMLView::Table->isa($tab)) {$self->set_table($tab);}
   $self->{'tab'}=$tab;
 
   $self;
+}
+
+=head2 $fld->initiate_js_onChange();
+  Initalize the js of the onChange eveng looking for files with default name
+=cut
+
+sub initiate_js_onChange() {
+  my $self=shift;
+  my $filename=$self->name.'_'.$self->tab->name.'_onChange';
+  #if (open (JSF,"</root/public_html/DBIx-HTMLView-0.7/".$filename.'.js')) {
+  if (open (JSF,"<".$filename.'.js')) {
+    my $r; 
+    my $str=undef;
+    while ($r=<JSF>) {
+      $str.=$r;
+    }       
+       
+    close(JSF);
+    $self->set_onChange($str);
+    $self->set_onChange_name($filename);
+  }
+}
+ 
+=head2 $fld->get_onChange()
+  Returns the code of the Javascript linked to the onChange event in
+  edit/insert forms.
+=cut
+ 
+sub get_onChange {
+  shift->{'jscodeonChange'};
+}
+ 
+=head2 $fld->get_onChange_name()
+  Returns the name of the javascript function to be launched on the onChange
+  event. If undef returns the default.
+=cut
+ 
+sub get_onChange_name {
+  my $self=shift;
+  my $ans=$self->{'jsnameonChange'};
+  $ans;
+}
+ 
+ 
+=head2 $fld->set_onChange_name()
+  Set the name of the js function to be called with onChange event
+=cut
+ 
+sub set_onChange_name() {
+  my $self=shift;
+  $self->{'jsnameonChange'}=shift;
+}
+ 
+ 
+=head2 $fld->set_onChange()
+ Set the code of the js function to be called with onChange event
+=cut
+ 
+sub set_onChange() {
+  my $self=shift;
+  $self->{'jscodeonChange'}=shift;
 }
 
 =head2 $fld->name
@@ -142,7 +204,7 @@ sub got_data {
   (defined $self->{'data'}{$key});
 }
 
-=head2 $fld->set_tab($tab)
+=head2 $fld->set_table($tab)
 
 Used by DBIx::HTMLView::Table to inform the fld of which table it belongs
 to. All fld belongs to either a Table or a Post.
@@ -153,6 +215,7 @@ to. All fld belongs to either a Table or a Post.
 sub set_table {
   my ($self, $tab)=@_;
   $self->{'tab'}=$tab;
+  $self->initiate_js_onChange();
 }
 
 =head2 $fld->set_post($post)
@@ -202,6 +265,8 @@ sub post {
   confess "Post not defined!" if (!defined $self->{'post'});
   $self->{'post'};
 }
+
+sub got_post {return defined shift->{'post'}}
 
 1;
 
@@ -338,8 +403,21 @@ sub view_text {shift->view_fmt('view_text');}
 sub view_html {shift->view_fmt('view_html');}
 sub edit_html {shift->view_fmt('edit_html');}
 
+sub view_fmt_code {
+  my ($self, $fmt_name, $fmt)=@_;
+  if (defined $fmt) {
+   $fmt=~s/\'/\\\'/g; $fmt="'".$fmt."'";   
+ } else {
+   $fmt="undef";
+ }
+  return '$self->view_fmt('."'$fmt_name',$fmt)\;";
+}
 
+sub sql_join {return undef;}
 
+sub delete_code{return '';}
+
+sub sql_data_array {shift->sql_data(@_)}
 
 # Local Variables:
 # mode:              perl

@@ -162,11 +162,31 @@ sub view_fmt {
     my $p=DBIx::HTMLView::Fmt->new;
     return $p->parse_fmt($self, $fmt_name, $fmt);
   } else {
-    return "No match!" if !defined($self->post);
     return $self->post->view_fmt($fmt_name, $fmt) if $self->got_val;
     return "";
   }
 }
+sub compiled_fmt {
+  my ($self, $fmt_name, $fmt, $sel, $opt)=@_;
+  if (!defined $fmt) {$fmt=$self->fmt($fmt_name)}
+
+  if ($fmt =~ /^<InRel>(.*)$/i) {
+    $fmt=$1;
+    my $p=DBIx::HTMLView::Fmt->new;
+    return $p->compiled_fmt($self, $fmt_name, $fmt, $sel, $opt);
+  } else {
+    $sel->add_fld($self->to_tab_name . "." . $self->to_tab->id->name);
+    $sel->add_tab($self->to_tab_name);
+    $sel->add_to_where('and ' . $self->to_tab_name . "." . $self->to_tab->id->name .
+    		       "=" . $sel->view_tab($self->tab->name) . "." . $self->name);
+    #$sel->add_to_join('left join ' . $self->to_tab_name . ' on ' .
+    #		      $self->to_tab_name . "." . $self->to_tab->id->name .
+    #		       "=" . $sel->view_tab($self->tab->name) . "." . $self->name);
+    
+    return $self->to_tab->new_post->compiled_fmt($fmt_name, $fmt, $sel, $opt);
+  }
+}
+sub view_fmt_code{DBIx::HTMLView::Fld::view_fmt_code(@_)}
 
 sub default_fmt {
   my ($self, $kind)=@_;
@@ -175,6 +195,27 @@ sub default_fmt {
   }
   
   return DBIx::HTMLView::Relation::default_fmt(@_)
+}
+
+sub sql_data {
+  my ($self, $sel, $sub)=@_;
+  my $nxt=shift(@$sub);
+
+  if (defined $nxt) {
+    return $self->sql_join($sel). " AND ".
+	$self->to_tab->fld($nxt)->sql_data($sel, $sub);
+  } else {
+    return $self->tab->name . "." . $self->name;
+  }
+}
+
+sub sql_join {
+  my ($self, $sel)=@_;
+
+  $sel->add_tab($self->to_tab_name);
+  #$sel->add_fld($self->to_tab_name . "." . $self->to_tab->id->name);
+  return $self->to_tab_name . "." . $self->to_tab->id->name .
+        "=" . $self->tab->name . "." . $self->name;
 }
 
 # Local Variables:

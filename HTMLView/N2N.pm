@@ -90,6 +90,9 @@ fmt - Specifies the fmt string to be passed to view_fmt of the PostSet
 extra_sql - Extra sql code passe to the list method when listing related 
    posts. This can for example be used to specify in which order related 
    posts should be viewed. Default is "ORDER BY <to table id name>".
+no_create - Set to one if the link table is craeted elsewhere and thus 
+   should not be created automatically.
+
 
 As you se, it is only tab that does not have any default value, 
 so it has to be defined within the table declaration, it's usually also a
@@ -120,7 +123,7 @@ sub new {
     $self->{'id'}=$data;
     if (ref $this) {$self->{'data'}=$this->{'data'};}
   }
-  
+
   $self;
 }
 
@@ -140,6 +143,8 @@ sub db {
 Returns the id of the post this relation belongs to.
 
 =cut
+
+sub got_id {return shift->post->got_id;}
 
 sub id {
   my $self=shift;
@@ -325,6 +330,7 @@ sub post_set {
 
   if (!$self->got_post_set) {    
     $self->{'posts'}=DBIx::HTMLView::PostSet->new($self->to_tab);
+    $self->{'posts'}->usepages(0);
     # FIXME: Do we relay need to get the entire related post?
     my $to_flds="";
     foreach ($self->to_tab->flds) {
@@ -491,22 +497,68 @@ relation.
 
 =cut
 
-sub sql_data {
+sub sql_data_array {
   my ($self, $sel, $sub)=@_;
-  # FIXME: Won't work if relation is second argument
-  # FIXME: Make sure this works for several levels, advanced selects, ...
+  my $nxt=shift(@$sub);
 
   $sel->add_tab($self->lnk_tab_name);
   $sel->add_tab($self->to_tab_name);
-  $sel->add_fld($self->lnk_tab_name . "." . $self->from_field_name);
-  $sel->add_fld($self->lnk_tab_name . "." . $self->to_field_name);
-  $sel->add_fld($self->to_tab_name . "." . $sub->[0]); # !!
 
-  return $self->lnk_tab_name . "." . $self->from_field_name .
-         "=" . $self->tab->name . "." . $self->tab->id->name . 
-         " AND " . $self->lnk_tab_name . "." . $self->to_field_name .
-         "=" . $self->to_tab_name . "." .$self->to_tab->id->name . 
-         " AND " .  $self->to_tab_name . "." . $sub->[0];
+
+  my $a= $self->lnk_tab_name . "." . $self->from_field_name .
+	  "=" . $self->tab->name . "." . $self->tab->id->name . 
+	  " AND " . $self->lnk_tab_name . "." . $self->to_field_name .
+	  "=" . $self->to_tab_name . "." .$self->to_tab->id->name;
+  my $b = $self->to_tab->fld($nxt)->sql_data_array($sel, $sub);
+  if (ref $b) {
+    $a="$a AND " . $b->[0];
+    $b=$b->[1];
+  }
+  return [$a,$b];
+}
+
+sub sql_data {
+  my ($self, $sel, $sub)=@_;
+  my $a=$self->sql_data_array($sel,$sub);
+  return $a->[0] . " AND " . $a->[1];
+}
+
+sub compiled_fmt {
+  my ($self, $fmt_name, $fmt, $sel, $opt)=@_;
+  if (!defined $fmt) {$fmt=$self->fmt($fmt_name)}  
+  
+  if ($fmt =~ /^<InRel>(.*)$/i) {
+    $fmt=$1;
+    my $p=DBIx::HTMLView::Fmt->new;
+    return $p->compile_fmt($self, $fmt_name, $fmt, $opt);
+  } else {
+    my $tableid='<Value ' . $self->tab->name . '.' . $self->tab->id->name . '>';
+    my $psel=DBIx::HTMLView::Selection->new($self->to_tab,'',[]);    
+    $psel->add_tab($self->lnk_tab_name);
+    $psel->add_fld($self->lnk_tab_name . "." . $self->from_field_name);
+    $psel->add_fld($self->lnk_tab_name . "." . $self->to_field_name);
+    $psel->add_to_where('('.$self->lnk_tab_name . "." . $self->from_field_name .
+			"=?".
+			" AND " . $self->lnk_tab_name . "." . $self->to_field_name .
+			"=" . $self->to_tab_name . "." .$self->to_tab->id->name . ")");
+
+    my $postfmt=DBIx::HTMLView::PostSet->new($self->to_tab)->compiled_fmt($fmt_name, $fmt, $psel, $opt);
+    my $sql=$psel->sql_select;
+    $sql=~s/\'/\\\'/g;
+    $sql.=" " . $self->data('extra_sql') if ($self->got_data('extra_sql'));
+    $postfmt=~s/<Value ([^>]+)>/'$row->['.$psel->field_pos($psel->view_fld($1)).']'/ge;
+    
+    return '; {
+my $sth=$dbi->prepare(\''.$sql.'\');
+if (!defined $sth) {die $sth->errstr}
+my $hits=$sth->execute('.$tableid.');
+
+my $row=$sth->fetchrow_arrayref;
+
+'.$postfmt.'
+
+} $res=$res';
+  }
 }
 
 =head2 $fld->field_name
@@ -520,8 +572,10 @@ sub field_name{undef}
 
 sub sql_create {
   my $self=shift;
-
-  $self->lnk_tab->sql_create;
+	
+	if (!($self->got_data('no_create'))) {
+		$self->lnk_tab->sql_create;
+	}
   undef;
 }
 
@@ -541,7 +595,7 @@ will be replaced by the returnvalue of eval(...).
 sub view_fmt {
   my ($self, $fmt_name, $fmt)=@_;  
   if (!defined $fmt) {$fmt=$self->fmt($fmt_name)}  
-
+  
   if ($fmt =~ /^<InRel>(.*)$/i) {
     $fmt=$1;
     my $p=DBIx::HTMLView::Fmt->new;
@@ -572,6 +626,14 @@ sub default_fmt {
   
   return DBIx::HTMLView::Relation::default_fmt(@_)
 }
+
+sub delete_code {
+  my ($self)=@_;
+
+  return '$dbi->prepare("delete from '.$self->lnk_tab_name.
+         ' where '.$self->from_field_name.'=".$q->param("id"))->execute;';
+}
+
 
 
 1;

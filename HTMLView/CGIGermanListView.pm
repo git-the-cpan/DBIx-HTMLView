@@ -159,7 +159,7 @@ EOF
   }  
   $hits=$self->db->tab($tab)->list($lst,$self->{'extra_sql'},
       $self->{'view_flds'});
-  $hits->tab->set_viewer($self);
+
   my $pages = int($hits->rows/$self->{'rows'})+1;
   $res.='<table width="100%" border=0 cellspacing=1 cellpadding=2>';
   $res.="<tr><td colspan=2><h2> $tab (";

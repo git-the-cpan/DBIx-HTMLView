@@ -88,14 +88,23 @@ sub got_val {
 sub default_fmt {
   my ($self, $kind)=@_;
   if ($kind eq 'edit_html') {
-    return   '<input name="<var name>" value="<perl>js_escape($self->var("val"))</perl>" size='.  
-      $self->edit_size . '>';
+		my $js='';
+		if ($self->get_onChange_name() ne '') {
+			$js=' onChange="' . $self->get_onChange_name().'() ';
+		}
+
+		return   '<input name="<var name>"' . $js
+			. '" value="<perl>js_escape($self->var("val"))</perl>" size='
+			. $self->edit_size .'>';
+ 
+
   }
   return DBIx::HTMLView::Fld::default_fmt(@_);
 }
 
 sub sql_data {
   my ($self, $sel)=@_;
+  #my $fld='Search_'.$self->tab->name . "." . $self->name;
   my $fld=$self->tab->name . "." . $self->name;
   $sel->add_fld($fld);
   $fld;
@@ -128,10 +137,30 @@ sub view_fmt {
   return $p->parse_fmt($self, $fmt_name, $fmt);
 }
 
+sub compiled_fmt {
+  my ($self, $fmt_name, $fmt, $sel, $opt)=@_;
+  my $val;
+
+  if (!defined $fmt) {$fmt=$self->fmt($fmt_name);}
+
+  my $p=DBIx::HTMLView::Fmt->new;
+  return $p->compiled_fmt($self, $fmt_name, $fmt, $sel, $opt);
+}
+
+sub view_fmt_code {
+  my ($self, $fmt_name, $fmt)=@_;
+  my $val;
+
+  if (!defined $fmt) {$fmt=$self->fmt($fmt_name);}
+
+  my $p=DBIx::HTMLView::Fmt->new;
+  return $p->parse_fmt_to_code($self, $fmt_name, $fmt);
+}
+
 sub var {
   my ($self, $var) =@_;
   if (lc($var) eq 'val') {
-    return $self->val if ($self->got_val);
+    return  $self->val if ($self->got_val);
     return "";
   }
   if (lc($var) eq 'name') {

@@ -51,12 +51,19 @@ require DBIx::HTMLView::PostSet;
 
 require DBIx::HTMLView::Selection;
 
-=head2 DBIx::HTMLView::Table->new($name, @flds)
+=head2 DBIx::HTMLView::Table->new($name, [$opt,] @flds)
 
 Creates a new table representation for a table named $name. This has to
 be the same name as the database engine has for the table. @flds is an 
 array of DBIx::HTMLView::Fld objects which represent the separate fields
 and relations of the table.
+
+If $opt is a hash referencs and not a fld object its used to set a few 
+options for the Table. Currently, the following options are defined:
+
+  flds_to_view - An array specifying which Flds to view in a default 
+    listing.
+  rows - How many rows per page a default listing should contain.
 
 =cut
 
@@ -67,10 +74,16 @@ sub new {
 
   my ($name, @flds) = @_;
   $self->{'name'}=$name;
+  
+  if (!DBIx::HTMLView::Fld->isa($flds[0]) && ref $flds[0] eq 'HASH') {
+    $self->{'options'}=shift(@flds);
+  }
+  $self->{'options'}{'rows'}=50;
 
   foreach my $f (@flds) {
     $f->set_table($self);
     push @{$self->{'flds'}}, $f;
+    $self->{'fld_names'}{$f->name}=$#{$self->{'flds'}};
     if ($f->isa('DBIx::HTMLView::Id')) {$self->{'id'}=$f}
   }
   if (!defined $self->{'id'}) {
@@ -78,9 +91,79 @@ sub new {
     $fld->set_table($self);
     $self->{'id'}=$fld;
     push @{$self->{'flds'}}, $fld;
+    $self->{'fld_names'}{$fld->name}=$#{$self->{'flds'}};
   }
 
   $self;
+}
+
+=head2 $tab->initiate_js_onSubmit();
+ Initalize the js of the onSubmit looking for files with default name
+ 
+=cut
+
+sub initiate_js_onSubmit() {
+  my $self=shift;
+  my $path=shift;
+  my $filename=$self->name.'_onSubmit';
+  my $str=undef;
+  if (open (JSF,"<".$path.$filename.'.js'))
+    {
+      my $r;
+      while ($r=<JSF>)
+	{
+	  $str.=$r;
+	}        
+      
+      close(JSF);
+      $self->set_JSonSubmit($str);
+      $self->set_JSonSubmit_name($filename.'()');
+    }
+}
+
+=head2 $table->get_JSonSubmit()
+  Returns the javascript code associated to the submit botton on edit/insert
+  forms.
+=cut
+  
+sub get_JSonSubmit() {
+  shift->{'JS_onSubmit'};
+}
+ 
+=head2 $table->set_JSonSubmit()
+ Set the javascript code associated to the submit botton on edit/insert
+ forms.
+=cut
+
+sub set_JSonSubmit() {
+  my $self=shift;
+  $self->{'JS_onSubmit'}=shift;
+}
+ 
+=head2 $table->set_JSonSubmit_name()
+ Set the name of the function associated to the submit botton on edit/insert
+ forms.
+=cut
+ 
+sub set_JSonSubmit_name {
+  my $self=shift;
+  $self->{'JS_onSubmit_name'}=shift;
+}
+ 
+ 
+=head2 $table->get_JSonsubmit_name()
+ Returns the name of the function associated to the submit botton on 
+ edit/insert forms.
+=cut
+
+sub get_JSonSubmit_name() {
+  shift->{'JS_onSubmit_name'};
+}
+
+
+sub opt {
+  my ($self, $opt)=@_;
+  return $self->{'options'}{$opt};
 }
 
 =head2 $table->id
@@ -120,17 +203,6 @@ sub set_db {
   $self->{'db'}=$db;
 }
 
-=head2 $table->set_viewer($db)
-
-To inform the table about ...
-To have links to the cgi script inside the table
-=cut
-
-sub set_viewer {
-  my ($self, $viewer)=@_;
-  $self->{'viewer'}=$viewer;
-}
-
 =head2 $table->list($search, $extra, $flds)
 
 Returns a DBIx::HTMLView::PostSet object with the posts matching the
@@ -163,29 +235,20 @@ while (defined $post=$self->get_next) {
 
 =cut
 
-sub list {
-  my ($self, $search, $extra, $flds)=@_;
+sub select_list {
+  my ($self, $search, $extra, $flds, $order)=@_;
   my $select;
 
-  if (defined $search) {
-    my $sel=DBIx::HTMLView::Selection->new($self,$search,$flds);
-    $select=$sel->sql_select;
-  } else {
-    my $fld='';
-    if (defined $flds) {
-      $fld=$self->id->name;
-      foreach (@$flds) {
-        my $n=$self->fld($_)->field_name;
-        if (defined $n){$fld.=", $n" ;}
-      }
-    } else {
-      $fld='*';
-    }
-    $select="select $fld from " . $self->name;
-  }
+	my $sel=DBIx::HTMLView::Selection->new($self,$search,$flds,undef,$order);
+	$select=$sel->sql_select;
 
   if (defined $extra) {$select.=" " .$extra;}
-  $self->sql_list($select);
+  return $select;
+}
+
+sub list {
+  my $self=shift;
+  $self->sql_list($self->select_list(@_));
 }
 
 =head2 $table->count($search, $extra)
@@ -300,7 +363,9 @@ reference to an array of the id's of the posts being related to.
 sub new_fld {
   my ($self, $fld, $val)=@_;
   if ($self->got_fld($fld)) {
-    return $self->fld($fld)->new($fld,$val,$self); 
+    my $newfld=$self->fld($fld)->new($fld,$val,$self);
+    $newfld->initiate_js_onChange();
+    return $newfld;
   } else {
     return DBIx::HTMLView::Str->new($fld,$val,$self);
   }
@@ -332,10 +397,12 @@ $fld.
 sub fld {
   my ($self, $fld) =@_;
   die "No fields found!" if (!defined $self->{'flds'});
-  foreach (@{$self->{'flds'}}) {
-    if ($_->name eq $fld) {return $_;}
+  my $pos=$self->{'fld_names'}{$fld};
+  if (defined $pos) {
+    return $self->{'flds'}[$pos];
+  } else {
+    confess "Field not found: $fld";
   }
-  confess "Field not found: $fld";
 }
 
 =head2 $table->got_fld($fld)
@@ -347,10 +414,11 @@ Returns true if this table has a field or relation named $fld.
 sub got_fld {
   my ($self, $fld) =@_;
   return 0 if (!defined $self->{'flds'});
-  foreach (@{$self->{'flds'}}) {
-    if ($_->name eq $fld) {return 1;}
+  if (defined $self->{'fld_names'}{$fld}) {
+    return 1;
+  } else {
+    return 0;
   }
-  return 0;
 }
 
 =head2 $table->fld($fld)
@@ -376,18 +444,6 @@ sub db {
   my $self=shift;
   die "No db defined!" if (!defined $self->{'db'});
   $self->{'db'};
-}
-
-=head2 $table->viewer
-
-Returns the DBIx::HTMLView::DB object this table belongs to.
-
-=cut
-
-sub viewer {
-  my $self=shift;
-  confess "No viewer defined!" if (!defined $self->{'viewer'});
-  $self->{'viewer'};
 }
 
 =head2 $table->del($id)
@@ -495,27 +551,28 @@ of the rest. To for example contain the view, edit and delete buttons.
 =cut
 
 sub list_fmt {
-  my ($self, $kind, $butt, $flds,$viewer) = @_;
+  my ($self, $kind, $butt, $flds) = @_;
 
   if (defined $kind && $kind eq 'view_text') {
     return "<node join=\"\n\"></node>";
   } else {
-    my $res="<table border=1>";
+    my $res="<table border=4 cellspacing=3 cellpadding=3>";
     my @flds;
-  
+    
     if (defined $flds) {
       @flds=@$flds;
     } else {
       @flds=$self->fld_names;
     }
-
+    
     $res.="<tr>";
     foreach (@flds) {
-    if (defined($viewer)) {
-        $res.='<th><a href="'.$viewer->script_name."?_Order=$_&".$viewer->lnk."\">$_</a>"."</th>";
-    } else {
+      if (defined($self->db->viewer)) {
+        $res.='<th><a href="'.$self->db->viewer->script_name."?_Order=$_&".
+	  $self->db->viewer->lnk."\">$_</a>"."</th>";
+      } else {
         $res.="<th>$_</th>";
-    }
+      }
     }
     $res.="</tr>";
 
@@ -528,10 +585,23 @@ sub list_fmt {
     }
     $res.="</tr></node>";
 
-    $res.="</table>";
+    $res.="</table><br>";
     return $res;
   }
 }
+
+sub delete_code {
+  my ($self)=@_;
+  my $res='';
+
+  #FIXME: Removed relation links in other posts to the deleted post
+
+  foreach ($self->flds) {$res.=$_->delete_code . "\n";}
+
+  return $res.'$dbi->prepare("delete from '.$self->name.
+         ' where id=".$q->param("id"))->execute;';
+}
+
 1;
 
 

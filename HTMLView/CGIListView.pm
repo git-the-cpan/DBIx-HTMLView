@@ -58,7 +58,13 @@ sub new {
   $self->{'view_flds'}=undef;
   $self->{'extra_sql'}=undef;
   $self->{'page'}=1;
-  $self->{'rows'}=50;
+  $self->{'rows'}=$self->tab->opt('rows');
+
+	my $ftv=$self->tab->opt('flds_to_view');
+  if (defined $ftv) {
+		$self->flds_to_view(@$ftv);
+	}
+
   $self;
 }
 
@@ -84,6 +90,17 @@ sub flds_to_view {
   my $self=shift;
   my @flds=@_;
   $self->{'view_flds'}=\@flds;
+}
+
+sub get_flds_to_view {
+  my $self=shift;
+  my @names;
+  my $a=0;
+  $a=1 if defined $self->{'view_flds'};
+  if ($a==1){  
+  foreach (@{$self->{'view_flds'}}) {push @names, $_;}
+  }
+  @names;
 }
 
 =head2 $view->extra_sql($extra)
@@ -130,64 +147,108 @@ sub view_html {
   my $q=$self->cgi;
   my $script=$self->script_name;
   my $tab=$self->tab->name;
-  my $res =  << "EOF";
+	my $cmd=$q->param('_Command');
+	if (!defined $cmd) {$cmd=""}
+	my $res="";
+	my @culomns;
+
+	if (!defined $self->cgi->param('_SubEditFld')) {
+		my @rowsoptions=(5,10,25,50,100,250,500,1000,2500,5000);
+		my $i=0;
+		$res .=  << "EOF";
 <h1>Current table: $tab</h1>
 
 <b>Change table</b>: 
 EOF
 
-  #$res .= "<form method=POST action=\"$script\">";
-  my $data = $self->form_data;
-  $data =~ s/<input type=hidden name="_Table" value="[^\"]+">//;
-  $res.=$data;
+	  #$res .= "<form method=POST action=\"$script\">";
+    #my $data = $self->form_data;
+    #$data =~ s/<input type=hidden name="_Table" value="[^\"]+">//;
+    #$res.=$data;
 
-  if (defined $self->{'restrict_tabs'}) {
-    foreach (@{$self->{'restrict_tabs'}}) {
-      #$res .= '<input type=submit name=_Table value="' . $_ . '">';
-      $res .= "<a href=\"$script?_Table=$_&"
-        .$self->lnk.'">'.$_. '</a> ';
-      $res .= '<a href="'.$script.'?_Table='.$_.
-      '&_Action=add&'.$self->lnk.'">+</a>, ';
-    }
-  } else {
-    foreach ($self->db->tabs) {
-      #$res .= '<input type=submit name=_Table value="' . $_->name . '">';
-      $res .= "<a href=\"$script?_Table=".$_->name."&"
-        .$self->lnk.'">'.$_->name. '</a> ';
-      $res .= '<a href="'.$script.'?_Table='.$_->name.
-      '&_Action=add&'.$self->lnk.'">+</a>, ';
-    }
-  }
-  #$res .= '</form>';
+	  if (defined $self->{'restrict_tabs'}) {
+			foreach (@{$self->{'restrict_tabs'}}) {
+				#$res .= '<input type=submit name=_Table value="' . $_ . '">';
+				$res .= "<a href=\"$script?_Table=$_&"
+					.'">'.$_. '</a> ';
+				$res .= '<a href="'.$script.'?_Table='.$_.
+					'&_Action=add&'.'">+</a>, ';
+			}
+		} else {
+			foreach ($self->db->tabs) {
+				#$res .= '<input type=submit name=_Table value="' . $_->name . '">';
+				$res .= "<a href=\"$script?_Table=".$_->name."&"
+					.'">'.$_->name. '</a> ';
+				$res .= '<a href="'.$script.'?_Table='.$_->name.
+					'&_Action=add&'.'">+</a>, ';
+			}
+		}
+		$res .= '<p>';
 
-  my $cmd=$q->param('_Command');
-  if (!defined $cmd) {$cmd=""}
-$res .= << "EOF";
-<p>
-<form method=POST action="$script">
-  <B>Search</b>: <input name="_Command" VALUE="$cmd">
-  <input type=hidden name="_Action"  value="search">
-  <input type=submit value="Search">
-EOF
-  $res .= $self->form_data . "</from><hr>";
-  
-  my $hits;
-  my $lst=undef;
-  my $order=$q->param('_Order');
-  # FIXME: combinde ORDER with previous extra_sql
-  $self->{'extra_sql'}="ORDER BY $order DESC" if defined $order; 
-  $self->{'page'}=$q->param('_Page')||1;
+		my $abspath=$q->url();
+		my $relpath=$q->url(-relative=>1);
+		my $path;
+		($path=$abspath)=~s/$relpath$//;
+		foreach ($self->db->tabs){
+			$_->initiate_js_onSubmit($path);
+		}
 
-  my $act=$q->param('_Action');
-  if (defined $act && $act eq 'search') {
-    $lst=$q->param('_Command');
-  }  
+		if($q->param('_Maxrows')!=0) { # update number of lines per page
+			$self->{'rows'}=$q->param('_Maxrows');
+		}
+
+		$res.='<hr>';
+
+	my $hits;
+	my $lst=undef;
+	my $first=0;
+
+	my $order=$q->param('_Order');
+  $order.=" DESC" if defined $order;
+	if (!$order) {
+		$order.=$q->param('_Orderby').','.
+			$q->param('_Thenby1').','.$q->param('_Thenby2');
+	}
+
+	$self->{'page'}=$q->param('_Page')||1;
+
+		my @all_culomns=$self->db->tab($tab)->fld_names();
+		if ($self->get_flds_to_view) {
+			@all_culomns=$self->get_flds_to_view;
+		}
+		my $i=0;
+		foreach (@all_culomns) { #find real columns and not relations N2N
+			if (!($self->db->tab($tab)->fld($_)->field_name() cmp 
+						$self->db->tab($tab)->fld($_)->name())) {
+				$culomns[$i]=$_;
+				$i++;
+			}
+		}
+
+	
+	my $act=$q->param('_Action');
+	if (defined $act && $act eq 'search') {
+		if ($cmd ne "") {
+			$lst='('.$cmd.')';
+		}
+		my $i=0;
+
+		for ($i=0;$i<@culomns;$i++) {
+			my $pn='_Ord'.$i;
+			if ($q->param($pn)) {
+				if (defined $lst) {$lst.=' and ';}
+				$lst.=$culomns[$i].' '.$q->param($pn);
+			}
+		}
+
+	}
+
   $hits=$self->db->tab($tab)->list($lst,$self->{'extra_sql'},
-                             $self->{'view_flds'});
-  $hits->tab->set_viewer($self);
+																	 $self->{'view_flds'},$order);
   my $pages = int(($hits->rows-1)/$self->{'rows'})+1;
   my $id_name = $self->tab->id->name;
-
+	$res.="<BR><B>Field(s) found: </B>".$hits->rows."<BR><BR>";
+	
   for (1..$pages) { 
     if ($_ != $self->{'page'}) {
       $res .= '<a href="'.$script.'?_Page='.$_;
@@ -198,6 +259,7 @@ EOF
     }
   }
 
+	$hits->usepages(1);
   $res .= $hits->view_html(
     '<a href="'.$script.'?_id=<fld '. $id_name .
                            '>&_Action=show&'.$self->lnk.'">Show</a> '.
@@ -206,10 +268,143 @@ EOF
     '<a href="'.$script.'?_id=<fld '. $id_name .
                            '>&_Action=delete&'.$self->lnk.'">Delete</a> ',
                            $self->{'view_flds'},
-                           $self
-  );
+													);
 
+	if (defined $self->tab->opt('short_add') ) {
+		my $p=$self->tab->new_post;
+	  $res .= "\n<form method=POST action=\"$script\">";
+		$res .= "<input type=hidden name=_Action value=update>";
+    $res .= $self->form_data;
+		$res.= '<input type=hidden name="'.$self->cgi->param('_SubEditFld').
+			'" value="'.$self->cgi->param('_SubEditVal').'">';
+		$res.=$p->view_fmt('edit_html', $self->tab->opt('short_add'));
+		$res .= '<input type=submit value="Add"></form>'."\n";
+	}
   $res .= '<a href="'.$script.'?_Action=add&'.$self->lnk.'">Add</a> ';
+	if (defined $self->cgi->param('_SubEditFld')) {
+		$res .= '<form><INPUT TYPE="BUTTON" VALUE="OK" ONCLICK="window.close();return true;"></form>';
+	}
+
+		$res .= << "EOF";
+<p>
+<form method=GET action="$script">
+	<input type=hidden name="_Action"  value="search">
+	<hr>
+
+  <hr>
+		<center>
+  <TABLE align=center><TR><TD align="center"><B>Show max</B></TD>
+             <TD align="center"><B>Order by</B></TD>
+             <TD align="center"><B>Then by</B></TD>
+             <TD align="center"><B>Then by</B></TD></TR><TR><TD>
+  <SELECT name="_Maxrows">
+    <OPTGROUP label="Nrows">
+EOF
+
+	  for ($i=0;$i<@rowsoptions;$i++)	{
+			if ($rowsoptions[$i]!=$self->{'rows'}){    
+				$res.='<OPTION label="'.$rowsoptions[$i].'" value="'.
+					$rowsoptions[$i].'">'.$rowsoptions[$i].' rows for page'; 
+			}	else {
+				$res.='<OPTION label="'.$rowsoptions[$i].'"value="'
+					. $rowsoptions[$i].'" selected=1 >'.$rowsoptions[$i]
+						. ' rows for page';
+			}
+		} 
+		$res.=" </OPTGROUP> </SELECT>";
+
+		$res.="</TD><TD>";
+ 
+		#             STARTING ORDERING BUTTONS
+
+
+		$res.='<SELECT name="_Orderby">';
+		$res.='<OPTGROUP label="Orderby">';
+		for ($i=0;$i<@culomns;$i++) {
+			if (!(($culomns[$i].' ASC') cmp $q->param('_Orderby'))) {
+				$res.='<OPTION label="'.$culomns[$i].'"value="'.
+					$culomns[$i].' ASC" selected=1>'.$culomns[$i].' ASC';
+			} else {
+				$res.='<OPTION label="'.$culomns[$i].'"value="'.
+					$culomns[$i].' ASC">'.$culomns[$i].' ASC';
+			}
+			if (!(($culomns[$i].' DESC') cmp $q->param('_Orderby'))){
+				$res.='<OPTION label="'.$culomns[$i].'"value="'.
+					$culomns[$i].' DESC" selected=1>'.$culomns[$i].' DESC';
+			} else {
+				$res.='<OPTION label="'.$culomns[$i].'"value="'.
+					$culomns[$i].' DESC">'.$culomns[$i].' DESC';
+			}
+		}
+		$res.="</OPTGROUP> </SELECT>";
+		$res.="</TD><TD>";
+       
+		$res.='<SELECT name="_Thenby1">';
+		$res.='<OPTGROUP label="Thenby1">';
+		for ($i=0;$i<@culomns;$i++) {
+			if (!(($culomns[$i].' ASC') cmp $q->param('_Thenby1'))) {
+				$res.='<OPTION label="'.$culomns[$i].'"value="'.
+					$culomns[$i].' ASC" selected=1>'.$culomns[$i].' ASC';
+			} else {
+				$res.='<OPTION label="'.$culomns[$i].'"value="'.
+					$culomns[$i].' ASC">'.$culomns[$i].' ASC';
+			}
+			if (!(($culomns[$i].' DESC') cmp $q->param('_Thenby1'))) {
+				$res.='<OPTION label="'.$culomns[$i].'"value="'.
+					$culomns[$i].' DESC" selected=1>'.$culomns[$i].' DESC';
+			} else {
+				$res.='<OPTION label="'.$culomns[$i].'"value="'.
+					$culomns[$i].' DESC">'.$culomns[$i].' DESC';}
+		}
+		$res.="</OPTGROUP> </SELECT>";
+		$res.="</TD><TD>";
+
+		$res.='<SELECT name="_Thenby2">';
+		$res.='<OPTGROUP label="Thenby2">';
+		for ($i=0;$i<@culomns;$i++) {
+			if (!(($culomns[$i].' ASC') cmp $q->param('_Thenby2'))) {
+				$res.='<OPTION label="'.$culomns[$i].'"value="'.
+					$culomns[$i].' ASC" selected=1>'.$culomns[$i].' ASC';
+			} else {
+				$res.='<OPTION label="'.$culomns[$i].'"value="'.
+					$culomns[$i].' ASC">'.$culomns[$i].' ASC';};
+			if (!(($culomns[$i].' DESC') cmp $q->param('_Thenby2'))) {
+				$res.='<OPTION label="'.$culomns[$i].'"value="'.
+					$culomns[$i].' DESC" selected=1>'.$culomns[$i].' DESC';
+			} else {
+				$res.='<OPTION label="'.$culomns[$i].'"value="'.
+					$culomns[$i].' DESC">'.$culomns[$i].' DESC';
+			}
+		}
+		$res.="</OPTGROUP> </SELECT>";
+		$res.="</TD></TR></TABLE></center>";
+
+		#             ENDED ORDERING BUTTONS
+
+
+		$res.="<center><b>Filter By:<b>";
+		$res.="\n<TABLE><TR>";
+		
+		foreach(@culomns) {
+			$res.="<TD align=center><B>".$_."</B>";
+		}
+		$res.="</TR><TR>";
+
+		my $lc=0;my $pn;
+		foreach(@culomns) {
+			$pn='_Ord'.$lc;
+			$res.='<TD colspan=1 align=center><INPUT type="text" value="'.
+				$q->param($pn).'" name="_Ord'.$lc.'" size=15></TD>';
+			$lc++;
+		}
+
+		$res.=
+			"</tr></table>\n".
+			"AND <input name=\"_Command\" SIZE=50 VALUE=\"$cmd\"><p>".
+			'<p><input type=submit value="OK">';
+    $res .= $self->form_data . "\n</center></form><hr>\n";
+	}
+
   $res;
 }
 
@@ -218,7 +413,7 @@ EOF
 
 
 # Local Variables:
-# mode:              perl
-# tab-width:         8
+# perl-mode:              perl
+# perl-tab-width:         8
 # perl-indent-level: 2
 # End:

@@ -166,6 +166,8 @@ sub view_fmt {
   }
 }
 
+sub view_fmt_code{DBIx::HTMLView::Fld::view_fmt_code(@_)}
+
 sub default_fmt {
   my ($self, $kind)=@_;
   if (defined $kind && $kind eq 'edit_html') {

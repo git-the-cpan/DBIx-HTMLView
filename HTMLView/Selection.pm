@@ -77,8 +77,11 @@ fields of the table will be selected.
 
 $opps is an array ref listing all the opperations your SQL server
 supports and you wish to be able to use in your search query. Deault
-is: ['<', '>', '=', '<=', '>=', '<>', 'LIKE', 'RLIKE', 'CLIKE',
-'SLIKE'].
+is: ['<=', '>=', '<>', '<', '>', '=', 'LIKE', 'RLIKE', 'CLIKE',
+'SLIKE']. Note that the opperator <= must be placed before the 
+opperators < and = otherwise <= in a serach string will be 
+interpreted as the two opperators < and = next to eachother and
+generate a syntax error.
 
 =cut
 
@@ -87,36 +90,58 @@ sub new {
   my $class = ref($this) || $this;
   my $self=  bless {}, $class;
   
-  my ($tab, $str, $flds, $opps) =@_;
+  my ($tab, $str, $flds, $opps, $order) =@_;
   if (defined $opps) {
     $self->{'opps'}=$opps;
   } else {
-    $self->{'opps'}=['<', '>', '=', '<=', '>=', '<>', 'LIKE', 'RLIKE', 
+    $self->{'opps'}=['<=', '>=', '<>', '<', '>', '=', 'LIKE', 'RLIKE', 
                      'CLIKE'];
   }
   croak("Bad table: $tab") if (!$tab->isa('DBIx::HTMLView::Table'));
   $self->{'tab'}=$tab;
-  $self->{'str'}=$str;
+  $self->{'str'}=$str if (defined $str);
   $self->{'where'}="";
+  $self->{'join'}="";
   $self->{'flds'}={};
   $self->{'tabs'}={};
 
+  #$self->add_tab($self->tab->name ." as Search_".$self->tab->name);
   $self->add_tab($self->tab->name);
   if (defined $flds) {
     $self->add_fld($self->tab->name . "." . $self->tab->id->name);
     foreach (@$flds) {
-      $self->add_fld($self->tab->name . "." . $self->tab->fld($_)->field_name);
+      my $fname=$self->tab->fld($_)->field_name;
+      if (defined $fname) {
+				$self->add_fld($self->tab->name . "." . $fname);
+      }
     }
   } else {
     foreach ($self->tab->flds) {
-      if ($_->isa('DBIx::HTMLView::Field')) {
-        $self->add_fld($self->tab->name . "." . $_->name);
+			my $fname=$_->field_name;
+      if (defined $fname) {
+				$self->add_fld($self->tab->name . "." . $fname);
       }
     }
   }
 
-  $self->next_token;
-  $self->expr;
+	if (defined $str) {
+		$self->next_token;
+		$self->expr;
+	}
+
+	# Parse order request
+	if (defined $order) {
+		foreach (split(/\s*,\s*/,$order)) {
+			my $dir="";
+			if (/^([^\s]+)\s+(.*)$/) {$_=$1; $dir=$2}
+			$self->{'str'}=$_;
+			$self->next_token;
+			$self->{'order'}.=$self->fld_spec('ORDER'). " $dir, ";
+		}		
+		$self->{'order'} =~ s/, $//;
+	}
+
+
   $self;
 }
 
@@ -128,7 +153,7 @@ query passed to the constructor.
 =cut
 
 sub sql_select {
-  my $self=shift;
+  my ($self,$extra_select, $extra_from, $extra_where)=@_;
   my $tab=$self->tab->name;
   my $flds="";
 
@@ -143,10 +168,43 @@ sub sql_select {
     }
   }
   $flds =~ s/, $//;
+  $flds .= ", $extra_select" if (defined $extra_select);
+  @{$self->{'fld_order'}}=split(/, /, $flds);
 
-  return "select distinct $flds from " . 
-               join(', ', keys %{$self->{'tabs'}}) . " where " . 
-              $self->{'where'};
+
+  my $res="select $flds from " . 
+          join(', ', keys %{$self->{'tabs'}});
+  $res.=", $extra_from" if (defined $extra_from);
+  $res.= " " .$self->{'join'};
+  if (defined $self->{'where'} && $self->{'where'} ne '') {
+    $self->{'where'} =~ s/^\s*and//i;
+    $res.= " where " . $self->{'where'};
+    $res.="AND ($extra_where)" if (defined $extra_where);
+  } else {
+    $res.=" where $extra_where" if (defined $extra_where);
+  }
+
+  $res.= " group by " . $tab . "." . $self->tab->id->name;
+  if (defined $self->{'order'}) {
+    $res.=" order by " . $self->{'order'}
+  }
+  return $res;  
+}
+
+sub field_pos {
+  my ($self, $fldname) =@_;
+  my $i=0;
+  if (defined $self->{'fld_order'}) {
+    foreach (@{$self->{'fld_order'}}) {
+      if ($_ eq $fldname) {
+        return $i;
+      }
+      $i++;
+    }
+    confess ("Field $fldname not selected.");
+  } else {
+    confess ("You must call sql_select or sql_cout before fld_order");
+  }
 }
 
 =head2 $sel->sql_count
@@ -172,6 +230,7 @@ sub sql_count {
     }
   }
   $flds =~ s/, $//;
+  $self->{'fld_order'}=split(/, /, $flds);
 
   return "select count(*) from " . 
                join(', ', keys %{$self->{'tabs'}}) . " where " . 
@@ -196,13 +255,26 @@ slect query.
 
 sub add_to_where {shift->{'where'} .= shift(@_) . " ";}
 
+=head2 $sel->add_to_join($str)
+
+Add $str to the end of the string that will be the join clause of the
+slect query.
+
+=cut
+
+sub add_to_join {shift->{'join'} .= shift(@_) . " ";}
+
 =head2 $sel->add_fld($field_name)
 
 Adds the field named $field_name to the list of fields selected.
 
 =cut
 
-sub add_fld  {shift->{'flds'}{shift(@_)}=1;}
+sub add_fld  {
+  my ($self, $fld)=@_;
+  #if ($fld eq 'SubTab.') {confess ('Mjäk!');}
+  $self->{'flds'}{$fld}=1;
+}
 
 =head2 $sel->add_tab($table_name)
 
@@ -291,7 +363,7 @@ sub next_token {
   }
 
   # \d+
-  if ($self->{'str'} =~ s/^(-?\d*\.?\d+)//) {
+  if ($self->{'str'} =~ s/^(-?\d*\.?\d+|\?)//) {
     $self->token("number", $1);
     return;
   }
@@ -308,7 +380,7 @@ sub next_token {
     return;
   }
 
-  croak("Bad string: " . $self->{'str'});
+  confess("Bad string: " . $self->{'str'});
 }
 
 =head2 $sel->expr
@@ -333,7 +405,7 @@ sub expr {
       $self->next_token;
       $self->bool_value;
     } else {
-      croak ("Syntax error at: " . $self->{'str'});
+      confess ("Syntax error at: " . $self->{'str'});
     }
   }
 }
@@ -350,7 +422,7 @@ sub bool_value {
       $self->add_to_where(')');
       $self->next_token;
     } else {
-      croak ("Syntax error at: " . $self->{'str'});
+      confess ("Syntax error at: " . $self->{'str'});
     }
   } 
   
@@ -362,14 +434,14 @@ sub bool_value {
       #print "opp: " . $self->token . "\n";
       $self->next_token;
     } else {
-      croak ("Syntax error at: " . $self->{'str'});
+      confess ("Syntax error at: " . $self->{'str'});
     }
     $self->value
   }
 }
 
 sub fld_spec {
-  my $self=shift;
+  my ($self,$mode)=@_;
 
   if ($self->token("word")) {
     my $base=$self->token;
@@ -380,14 +452,23 @@ sub fld_spec {
       if ($self->token("word")) {
         push @sub, $self->token;
       } else {
-        croak ("Syntax error at: " . $self->{'str'});
+        confess ("Syntax error at: " . $self->{'str'});
       }
       $self->next_token;
     }
     #print "Fld: $base -> @sub<br>\n";
-    $self->add_to_where("(" . $self->tab->fld($base)->sql_data($self, \@sub));
+		if ($mode eq 'ORDER') {
+			my $a=$self->tab->fld($base)->sql_data_array($self, \@sub);
+			if (ref $a) {
+				$self->add_to_where("(" . $a->[0] .  ")");
+				$a=$a->[1];
+			}
+			return $a;
+		} else {
+			$self->add_to_where("(". $self->tab->fld($base)->sql_data($self, \@sub));
+		}
   } else {
-    croak ("Syntax error at: " . $self->{'str'});
+    confess ("Syntax error at: " . $self->{'str'});
   }
 }
 
@@ -406,9 +487,43 @@ sub value {
     $self->fld_spec;
   }
   else {
-    croak ("Syntax error at: " . $self->{'str'});
+    confess ("Syntax error at: " . $self->{'str'});
   }
 }
+
+sub view_tab {
+  my ($self, $tab, $view_name)=@_;
+  if (defined $view_name) {
+    $self->{'view_tab'}{$tab}=$view_name;
+    return $view_name;
+  } else {
+    if (defined $self->{'view_tab'}{$tab}) {
+      return $self->{'view_tab'}{$tab};
+    } else {
+      return $tab;
+    }
+  }
+}
+
+sub view_fld {
+  my ($self, $fld)=@_;
+  if ($fld =~ /^([^\.]+)(\.[^\.]+)$/) {
+    return $self->view_tab($1).$2;
+  } else {
+    return $fld;
+  }
+}
+
+=head2 get_str
+  
+  Return $str;
+
+=cut
+ 
+sub get_str {
+  shift->{'str'};
+}
+
 
 1;
 

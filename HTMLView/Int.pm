@@ -45,9 +45,13 @@ require DBIx::HTMLView::Field;
 
 sub name_vals {
   my $self=shift;
-  my $val=$self->val;
-  if ($val eq "") {$val="NULL"}
-  ({name=>$self->name, val=> $val });
+  if ($self->got_val) {
+    my $val=$self->val;
+    if ($val eq "") {$val="NULL"}
+    return ({name=>$self->name, val=> $val });
+  } else {
+    return ();
+  }
 }
 
 sub sql_create {my $self=shift;$self->db->sql_type("Int",$self)}

@@ -3,8 +3,8 @@
 use ExtUtils::MakeMaker;
 
 WriteMakefile(
-        'NAME' => 'DBIx::HTMLView',
-        'DISTNAME' => 'DBIx-HTMLView',
-        'VERSION_FROM' => 'HTMLView.pm',
-        'dist'   => {COMPRESS=>'gzip', SUFFIX=>'gz'}
+							'NAME' => 'DBIx::HTMLView',
+							'DISTNAME' => 'DBIx-HTMLView',
+							'VERSION_FROM' => 'HTMLView.pm',
+							'dist'   => {COMPRESS=>'gzip', SUFFIX=>'gz'},
 );

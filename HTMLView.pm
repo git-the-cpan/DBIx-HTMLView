@@ -60,6 +60,7 @@ objects:
 
   msqlDB
   mysqlDB
+  OracleDB
   Table
   Int
   Date
@@ -69,6 +70,10 @@ objects:
   Id
   N2N
   N2One
+  Tree
+  SubTab
+  Order
+  N2NOrder
   
 For backwards compatibility there is also a DB method calling msqlDB.
 
@@ -80,12 +85,13 @@ package DBIx::HTMLView;
 use strict;
 use vars qw(@ISA $VERSION @EXPORT);
 
-$VERSION="0.7";
+$VERSION="0.9";
 
 require Exporter;
 require DBIx::HTMLView::DB;
 require DBIx::HTMLView::mysqlDB;
 require DBIx::HTMLView::msqlDB;
+require DBIx::HTMLView::OracleDB;
 require DBIx::HTMLView::Table;
 require DBIx::HTMLView::Int;
 require DBIx::HTMLView::Str;
@@ -96,9 +102,12 @@ require DBIx::HTMLView::Id;
 require DBIx::HTMLView::N2N;
 require DBIx::HTMLView::N2One;
 require DBIx::HTMLView::Tree;
+require DBIx::HTMLView::SubTab;
+require DBIx::HTMLView::Order;
+require DBIx::HTMLView::N2NOrder;
 
 @ISA         = qw(Exporter);
-@EXPORT      = qw(DB mysqlDB msqlDB Table Str Bool Text Id N2N Int N2One Date Tree);
+@EXPORT      = qw(DB OracleDB mysqlDB msqlDB Table Str Bool Text Id N2N Int N2One Date Tree SubTab Order N2NOrder);
 
 sub DB {
   msqlDB(@_) # For backwards compatibility
@@ -110,6 +119,10 @@ sub mysqlDB {
 
 sub msqlDB {
   DBIx::HTMLView::msqlDB->new(@_);
+}
+
+sub OracleDB {
+  DBIx::HTMLView::OracleDB->new(@_);
 }
 
 sub Table {
@@ -150,6 +163,18 @@ sub N2One {
 
 sub Tree {
   DBIx::HTMLView::Tree->new(@_);
+}
+
+sub SubTab {
+  DBIx::HTMLView::SubTab->new(@_);
+}
+
+sub Order {
+  DBIx::HTMLView::Order->new(@_);
+}
+
+sub N2NOrder {
+  DBIx::HTMLView::N2NOrder->new(@_);
 }
 
 1;

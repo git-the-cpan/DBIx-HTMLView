@@ -46,6 +46,7 @@ handle the assignmet of id values to new posts correctly.
 
 package DBIx::HTMLView::DB;
 use strict;
+use DBIx::HTMLView::Log;
 
 use DBI;
 use Carp;
@@ -78,8 +79,9 @@ sub new {
   } else {
     my $user=shift;
     my $pass=shift;
-    $self->{'dbh'}=DBI->connect($db, $user, $pass);
-    if(!$self->{'dbh'}) {croak "DBI->connect failed on $db for user $user";}
+    $self->{'user'}=$user;  
+    $self->{'pass'}=$pass;  
+    $self->{'database'}=$db;
   }
 
   my $t;
@@ -91,10 +93,49 @@ sub new {
   $self;
 }
 
+sub dbh {
+  my ($self)=@_;
+  if(!$self->{'dbh'}) {
+    $self->{'dbh'}=DBI->connect($self->{'database'}, $self->{'user'}, 
+				$self->{'pass'});
+    if(!$self->{'dbh'}) {croak "DBI->connect failed on ",
+			   $self->{'database'}, " for user ",
+			   $self->{'user'}}
+  } 
+  return $self->{'dbh'};
+}
+
+sub database {shift->{'database'}}
+
 sub DESTROY {
   my $self=shift;
-  $self->{'dbh'}->disconnect;
+  if(!$self->{'dbh'}) {
+    $self->{'dbh'}->disconnect;
+  }
 }
+
+sub getlogfile {   
+  my $self=shift; 
+  $self->{'logfile'};
+}
+ 
+sub setlogfile {
+  my $self=shift; 
+  $self->{'logfile'}=shift;
+}
+ 
+sub getname {
+  my $self=shift;       
+  $self->{'user'};
+}
+
+sub rows {
+  my $self=shift;
+  my $postset=shift;
+
+  $postset->getsth->rows; #OK DEFAULT
+}
+
 
 =head2 $dbi->send($cmd)
 
@@ -103,17 +144,35 @@ on errors. The $sth is returned.
 
 =cut
 
+=head2 $dbi->print_only
+
+After this method has been called all sql queries will be printed 
+instead of sent to the database.
+
+=cut
+
+sub print_only {shift->{'should_print_only'}=1}
+
+sub should_print_only {shift->{'should_print_only'}}
+
 sub send {
   my $self=shift;
   my $cmd=shift;
-  my $sth = $self->{'dbh'}->prepare($cmd);
-  if (!$sth) {
-    confess "Error preparing $cmd: " . $sth->errstr . "\n";
+
+  if ($self->should_print_only) {
+    print "$cmd \n";
+  } else {
+    my $sth = $self->dbh->prepare($cmd);
+    if (!$sth) {
+      confess "Error preparing $cmd: " . $sth->errstr . "\n";
+    }
+    if (!$sth->execute) {
+      confess "Error executing $cmd:" . $sth->errstr . "\n";
+    }
+    
+    make_log($cmd,$self->getname(),$self->getlogfile());
+    $sth;
   }
-  if (!$sth->execute) {
-    confess "Error executing $cmd:" . $sth->errstr . "\n";
-  }
-  $sth;
 }
 
 =head2 $dbi->tab($tab)
@@ -183,7 +242,8 @@ sub update {
   my $cmd="update " . $tab->name . " set ";
   
   foreach my $f ($post->fld_names) {
-    foreach ($post->fld($f)->name_vals) {
+    my $fld=$post->fld($f);
+    foreach ($fld->name_vals) {
       $cmd.= $_->{'name'} ."=". $_->{'val'} . ", ";
     }
   }
@@ -292,6 +352,15 @@ sub sql_type {
 
   die "Bad type $t";
 }
+
+sub viewer {
+  my ($self, $viewer)=@_;
+  if (defined $viewer) {
+    $self->{'viewer'}=$viewer;
+  }
+  return $self->{'viewer'}
+}
+
 1;
 
 # Local Variables:

@@ -37,4 +37,10 @@ Allow N2One/N2N relations with no related post.
 Make Tree a N2One subclass
 Use sql commands to skip hist instaed of getting them in PostSet::view_fmt
 Make order an page prservation table dependent.
-
+Remove links to a Post when removing a Post
+ * Optimized fmt handling viewing an fmt with only fields are now 
+   54% faster. The same optimations should be appliable for relations.
+Compiled fmt with multilevel SubTab relatiosn might fail
+Add tests of compiled fmts to test.pl
+Get seraching working with compiled fmt containing SubTre flds
+Autocreate _pre_actions from code within the fmt files form's

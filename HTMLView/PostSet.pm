@@ -27,7 +27,7 @@ my $post_set=$table->list;  # Get a PostSet
 $post_set->view_html;       # view it
 
 $post_set=$table->list;     # Get a new one as the old now is used
-while (defined $post=$self->get_next) {
+while (defined ($post=$self->get_next)) {
   # Process $post...
 }
 
@@ -111,7 +111,12 @@ $sth->rows DBI function.
 =cut
 
 sub rows {
-    shift->{'sth'}->rows;
+  my $self=shift;
+  $self->tab->db->rows($self);
+}
+
+sub getsth {
+  shift->{'sth'};
 }
 
 =head2 $post_set->got_post($post)
@@ -142,6 +147,8 @@ belongs to.
 =cut
 
 sub tab {shift->{'tab'}}
+
+sub db {shift->tab->db}
 
 =head2 $post_set->get_next
 
@@ -206,7 +213,7 @@ with "No posts!" and "Not in save mode" respectivly.
 
 sub posts {
   my $self=shift;
-  croak "Not in save mode" if (!$self->save_mode);
+  confess "Not in save mode" if (!$self->save_mode);
   croak "No posts!" if (!defined $self->{'posts'});
   @{$self->{'posts'}};
 }
@@ -242,8 +249,8 @@ html format.
 #FIXME: We here shourtcust the calls to tab->list_fmt in order to pass params to it, noot good...
 
 sub view_html {
-  my ($self,$butt,$flds,$viewer)=@_;
-  $self->view_fmt("view_html", $self->tab->list_fmt("view_html",$butt,$flds,$viewer),$viewer);
+  my ($self,$butt,$flds)=@_;
+  $self->view_fmt("view_html", $self->tab->list_fmt("view_html",$butt,$flds));
 }
 
 =head2 $post->view_fmt($fmt_name, $fmt)
@@ -266,15 +273,14 @@ represented  even if you use a custom fmt passed to $fmt.
 =cut
 
 sub view_fmt {
-  my ($self, $fmt_name, $fmt,$viewer)=@_;
+  my ($self, $fmt_name, $fmt)=@_;
   my ($head, $node, $foot);
   my $join=undef;
   my $res;
-  my $p;
   if (!defined $fmt) {$fmt=$self->tab->list_fmt($fmt_name)}
 
   #FIXME: Use a real XML parser or some template package
-  while ($fmt =~ s/^(.*?)<sperl>(.*?)<\/sperl>/$1.eval($2)/geis) {}
+  while ($fmt =~ s/^(.*?)<sperl>(.*?)<\/sperl>/$1.eval('package fmt_code; no strict "vars"; '.$2)/geis) {}
   if ($fmt =~ /^(.*?)<node\s*(.*?)>(.*)<\/node>(.*)$/s) {
     $head=$1; $node=$3; $foot=$4;
     if ($2 =~ /^join\s*=\s*[\"\']?(.*?)[\"\']?$/s) {$join=$1}
@@ -282,37 +288,95 @@ sub view_fmt {
   } else {
     return $fmt;
   }
-  $res=$head;
+  my $p=DBIx::HTMLView::Fmt->new;
+  $res=$p->parse_fmt($self, $fmt_name, $head);
 
-  #my $t=eval {
-  #  $p=$self->first;
-  #}; die unless ($t || $@ =~ /^(No posts!)/);
-  #if ($t) {
-  #$res.=$p->view_fmt($fmt_name, $node);
-  
+  my $fmt_code=$self->tab->new_post->view_fmt_code($fmt_name, $node);
+  my $formt_post=eval('sub {package fmt_code; no strict "vars"; my $self=shift;  '.$fmt_code.'}');warn $@ if $@;
+
+#  print "<p>$fmt_code<p>";
+
   my $last=undef;
-  if (defined($viewer)){
-    my $skip=($viewer->{'page'}-1)*$viewer->{'rows'};
+  if (defined($self->db->viewer) && $self->usepages){
+    my $skip=($self->db->viewer->{'page'}-1)*$self->db->viewer->{'rows'};
     if ($skip) {  
       while (defined ($self->{'sth'}->fetch)) {
         last if ($self->{'next_post'}++>=$skip-1);
       } 
     }
-    $last=$viewer->{'page'}*$viewer->{'rows'};
+    $last=$self->db->viewer->{'page'}*$self->db->viewer->{'rows'};
   }
   my $first=1;
   while (defined ($p=$self->get_next)) {
     last if (defined $last && $self->{'next_post'}>$last);
     if (defined $join && !$first) {$res.=$join}
-    $res.=$p->view_fmt($fmt_name, $node);
-              $first=0;
+    #$res.=$p->view_fmt($fmt_name, $node);
+
+    #$res.= eval('my $self=$p;'.$fmt_code);
+    $res.= $formt_post->($p);
+    warn $@ if $@;
+
+    $first=0;
   }
   $res.=$foot;
   
   $res;
 }
 
+sub fmt_sel{shift->{'fmt_select'}}
+
+sub compiled_fmt {
+  my ($self, $fmt_name, $fmt, $sel, $opt)=@_;
+  while ($fmt =~ s/^(.*?)<sperl>(.*?)<\/sperl>/$1.eval('package fmt_code; no strict "vars"; '.$2)/geis) {}
+  my ($head, $node, $foot, $join);
+  if ($fmt =~ /^(.*?)<node\s*(.*?)>(.*)<\/node>(.*)$/s) {
+    $head=$1; $node=$3; $foot=$4;
+    if ($2 =~ /^join\s*=\s*[\"\']?(.*?)[\"\']?$/s) {$join=$1}
+    if ($node eq "") {$node=undef;}
+  } else {
+    $head=''; $foot=''; $node=$fmt;
+  } 
+
+  #$head=~s/\'/\\\'/g;
+  #$foot=~s/\'/\\\'/g;
+  my $p=DBIx::HTMLView::Fmt->new;
+  $head=$p->compiled_fmt($self, $fmt_name, $head, $sel, $opt);
+  if (!defined $sel) {$sel=$p->{'select'};}
+  $self->{'fmt_select'}=$sel;
+  $foot=$p->compiled_fmt($self, $fmt_name, $foot, $sel, $opt);
+  if (!defined $sel) {$sel=$p->{'select'};}
+  $self->{'fmt_select'}=$sel;
+  
+
+  my $np=$self->tab->new_post;
+  $fmt=$np->compiled_fmt($fmt_name,$node,$sel, $opt);
+  if (!defined $sel) {$sel=$np->{'fmt_select'};}
+  $self->{'fmt_select'}=$sel;
+
+  # FIXME: Use the join param if specified
+  my $idname=$sel->view_tab($self->tab->name) . "." .$self->tab->id->name;
+  $sel->add_fld($idname);
+  return '{
+my %got;
+$res=$res'.$head.';
+while (defined $row->[0]) {
+  if (!defined $got{<Value '.$idname.'>}) {
+    $res=$res'.$fmt .';
+    $got{<Value '.$idname.'>}=1;
+  }
+  $row=$sth->fetchrow_arrayref
+}
+$res=$res'.$foot.';
+}';
+}
+
 sub view_text {shift->view_fmt('view_text')}
+
+sub usepages{
+  my ($self, $u)=@_;
+  if (defined $u) {$self->{'usepages'}=$u;}
+  return $self->{'usepages'};
+}
 
 1;
 

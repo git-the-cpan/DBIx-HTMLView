@@ -1,13 +1,7 @@
-<html>
-  <head><title>Test2</title></head>
-  <body>
-    <node>
-			<table border=1>
-				<tr><td><fld nr></td><td><fld str></td></tr>
-			  <tr><td colspan=2><fld Lnk></td></tr>
-			</table>
-		  <p>
-    </node>
-	</body>
-</html>
+Test Poster:
+<node>
+id: <fld id>
+testf: <fld testf>
+</node>
+Ok!
 

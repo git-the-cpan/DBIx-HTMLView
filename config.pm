@@ -74,6 +74,17 @@ sub dbi {
 		  Tree('Super', {tab=>'TreeTest', fmt=>'<fld Super>/<fld Name>',
 				 fmt_view=>'<fld Name>',
 				 super_name=>'Super'}),),
+	    Table('SubTest', Id('id'), Str('Name'),
+		  SubTab('Sub',{lnk_tab=>'SubTab', from_field=>'Lnk'})),
+	    Table('SubTab', {flds_to_view=>['Name', 'Year', 'Tst'],
+			     short_add=>'Name <fld Name> Year <fld Year>'},
+		  Id('id'), Str('Name',{edit_size=>15}), 
+		  Str('Year',{edit_size=>5}),
+		  N2One('Lnk', {tab=>'SubTest', fmt=>'<fld Name>(<fld id>)'}),
+		  N2N('Tst', {tab=>'Test4', view=>'$Lnk[$Link]'}),
+		 ),
+            Table('Test6', Str('tst'), Order('Ord1'), Order('Ord2')),
+            Table('Test7', Str('tst'), N2NOrder('Tst',{tab=>'Test',fmt=>'<table><node><tr><td><Var Edit> <fld testf></td><td><Order MoveUp> <Order MoveDown></td></tr></node></table>'})),
 
            );
 }

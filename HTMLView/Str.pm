@@ -46,7 +46,11 @@ require DBIx::HTMLView::Field;
 
 sub name_vals {
   my $self=shift;
-  ({name=>$self->name, val=> $self->tab->db->sql_escape($self->val) });
+  if ($self->got_val) {
+    return ({name=>$self->name, val=> $self->tab->db->sql_escape($self->val) });
+  } else {
+    return ();
+  }
 }
 
 sub sql_create {my $self=shift;$self->db->sql_type("Str",$self)}

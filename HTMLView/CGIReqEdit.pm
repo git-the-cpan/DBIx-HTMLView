@@ -59,21 +59,22 @@ passed to the user will bring up the other tabels as well for editing.
 
 
 sub new {
-  my $this = shift;
-  my $class = ref($this) || $this;
-  my $self=       bless {}, $class;
-
-  my ($script,$post,$read_only,$cgi)=@_;
+  my ($this,$script,$post,$read_only,$cgi)=@_;
+  my $self=DBIx::HTMLView::CGIView::new($this, $script, $post->tab->db, $cgi);
   die "$post is not a DBIx::HTMLView::Post!" if (!$post->isa('DBIx::HTMLView::Post'));
-  $self->{'script'}=$script;
   $self->{'post'}=$post;
-  $self->{'cgi'}=$cgi;
   if (defined $read_only) {
     $self->{'read_only'}=$read_only;
   } else {
     $self->{'read_only'}="^\$";
   }
+  $self->{'extra_form_data'}='';
   $self;
+}
+
+sub extra_form_data {
+  my ($self, $data)=@_;
+  $self->{'extra_form_data'}=$data;
 }
 
 =head2 $view->post
@@ -90,7 +91,7 @@ Returns the databse we'r working with (a DBIx::HTMLVIew::Db object).
 
 =cut
 
-sub db {shift->post->db;}
+sub db {shift->post->tab->db;}
 
 =head2 $view->tab
 
@@ -120,24 +121,55 @@ sub view_html {
   my ($self)=@_;
   my $tab=$self->tab;
   my $res="";
-  
+
+  #now specifying the javascript
+ 
+  my $ocb;
+  foreach ($tab->fld_names()) {
+    $ocb=$self->tab->fld($_)->get_onChange();
+    $res.=$ocb; 
+  }       
+  $res.=$self->tab->get_JSonSubmit();
+  #end javascript
+
+
   $res.="<form method=POST action=" . $self->script_name . "><dl>";
   $res.= "<input type=hidden name=_Action value=update>";
   if ($self->got_cgi && defined $self->cgi->param('_done2')) {
     $res.= '<input type=hidden name=_done value="' . $self->cgi->param('_done2') . '">';
   }
-  $res.="<table>";
-  $res.="<input type=submit value=OK>";
+
+  my $okbutt;
+  if ($tab->get_JSonSubmit_name() eq "") {
+    $okbutt.='<input type=submit value=OK>';
+  } else {
+    $okbutt.='<input type="button" onclick="'.$tab->get_JSonSubmit_name().
+      '" value=OK>';
+  }
+  
+
+
+  $res.="<table border=2>";
+  $res.=$okbutt;
   foreach ($self->tab->fld_names) {
-    if (! ($_ =~ $self->read_only)) {
+    if (!($_ =~ $self->read_only) && !($self->got_cgi && $_ eq $self->cgi->param('_SubEditFld'))) {
       $res.= "<tr><td valign=top>";
       $res .="<b>$_ </b></td><td>".$self->post->fld($_)->edit_html;
       $res .="</td></tr>";
     }
   }
-  $res.="</table>";
+  $res.="</table><br>";
   $res.= $self->form_data;
-  $res.="</dl><input type=submit value=OK></from>";
+  $res.='</dl><BR><B>Click here to submit changes:</B>';
+  $res.=  $self->{'extra_form_data'};
+  if ($self->got_cgi) {
+    $res.= '<input type=hidden name="'.$self->cgi->param('_SubEditFld').
+      '" value="'.$self->cgi->param('_SubEditVal').'">';
+  }
+
+  $res.=$okbutt;
+
+  $res.="</from>";
   $res;
 }
 

@@ -1,0 +1,42 @@
+Here we desribed the extra tags availibe in for compiled fmts. For an
+overview of the fmt language see README.fmt.
+
+<fld>, <fmt> 
+  These two works just as described in REDAME.fmt, but can have
+  options in to form name=value. All those options will the be
+  avavlibe to the underlaying fmt through the <var name> tag. The
+  value of the option will be parsed and evaled as an fmt at each 
+  insertion time. There are a few special variable that can be set:
+  
+    name - The named fmt to use 
+    file - A file contaning an fmt which will be used as fmt and the
+           contents between <fmt> and </fmt> will be placed in 
+           <var fmt> 
+
+  A top level fmt also recognises the folowing varibales:
+
+    select        - The serach string to use
+    table         - The table to use
+    extra_select  - Added to the list of selected fields select
+                    statemet 
+    extra_from    - Added to the from clause of the select statem
+    extra_where   - Added to the where cluase of the select statem
+    extra_sql     - Added at the end of the select statement.
+
+<default name=value name=value>
+  An fmt can contain these kind of tags to provide default values for
+  it's options (as specifed in the <fld> or <fmt> tags). The tag has 
+  to be placed in the flt before the values are needed and should 
+  thus be placed at the very top of the file.
+
+<sql_val {expr}>
+  Adds {expr} to the sql expretions selected and replaces this tag
+  with a referense to it's selected value. It can contain any sql
+  expretion. For example to use the sql server to provide the field
+  Name in upper case use <sql_val UPPER(Name)>. If you use this tag
+  twice in your fmt with the same {expr} it will still only be sleced
+  once.
+
+<sql_select from={tab} where={sel}>{fmt}</sql_select>
+  This construct parses {sel} (expanding Lnk->Name constructs) into a
+  new selection on {tab} and presents te result using {fmt}.

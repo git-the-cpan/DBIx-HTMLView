@@ -109,8 +109,15 @@ sub new {
   if ($self->got_id) {$id=$self->id}
   # FIXME: Should this be done even if id is not defined?
   foreach ($self->tab->flds) {
-    if ($_->isa('DBIx::HTMLView::Relation') && !$self->got_fld($_->name)) {
-      $self->set($_->name, $self->tab->new_fld($_->name,$id));
+    #if ($_->isa('DBIx::HTMLView::Relation') && !$self->got_fld($_->name)) {
+    if (!$self->got_fld($_->name)) {
+      my $fld;
+      if ($_->isa('DBIx::HTMLView::Relation')) {
+	$fld=$self->tab->new_fld($_->name,$id);
+      } else {
+	$fld=$self->tab->new_fld($_->name);
+      }
+      $self->set($_->name, $fld);
     }
   }
   $self;
@@ -148,6 +155,32 @@ sub got_fld {
   #FIXME: Will this work for relations?
   my ($self, $fld_name)=@_;
   (defined $self->{'data'}{$fld_name});
+}
+
+ 
+=head2 $post->pairs
+ 
+ Return an array of 2*N element where eache element is the name of the field
+ and his value.
+ Can be used to easily make perl controls on the
+ integrity of the data.
+ 
+=cut
+ 
+sub pairs {
+  my $self=shift;
+  my @res;
+  my $cmd;
+  my $post=$self;
+  my $i=0;
+  
+  foreach my $f ($post->fld_names) {   
+    foreach ($post->fld($f)->name_vals) {
+      $res[$i++]=$_->{'name'};
+      $res[$i++]=$_->{'val'};
+    }
+  }
+  @res;
 }
 
 =head2 $post->view_text
@@ -203,6 +236,28 @@ sub view_fmt {
 
   my $p=DBIx::HTMLView::Fmt->new;
   return $p->parse_fmt($self, $fmt_name, $fmt);
+}
+
+sub compiled_fmt {
+  my ($self, $fmt_name,  $fmt, $sel, $opt)=@_;
+
+  if (!defined $fmt) {$fmt=$self->tab->post_fmt($fmt_name)}
+
+  my $p=DBIx::HTMLView::Fmt->new;
+  my $r=$p->compiled_fmt($self, $fmt_name, $fmt, $sel, $opt);
+
+  $self->{'fmt_select'}=$p->{'select'};
+
+  return $r;
+}
+
+sub view_fmt_code {
+  my ($self, $fmt_name,  $fmt)=@_;
+
+  if (!defined $fmt) {$fmt=$self->tab->post_fmt($fmt_name)}
+
+  my $p=DBIx::HTMLView::Fmt->new;
+  return $p->parse_fmt_to_code($self, $fmt_name, $fmt);
 }
 
 =head2 $post->fld_names
@@ -261,7 +316,7 @@ Returns true if the id of this post is defined, which is the same as that the po
 
 sub got_id {
   my $self=shift;
-  (defined $self->{'data'}{$self->tab->id->name});
+  (defined $self->{'data'}{$self->tab->id->name} && $self->{'data'}{$self->tab->id->name}->got_val);
 }
 
 

@@ -46,6 +46,7 @@ class for viewr or edit classes.
 package DBIx::HTMLView::CGIView;
 use strict;
 use Carp;
+use URI::Escape;
 
 =head2 $view=DBIx::HTMLView::CGIView->new($script, $db, $cgi)
 
@@ -65,6 +66,15 @@ sub new {
   $self->{'script'}=$script;
   $self->{'db'}=$db;
   $self->{'cgi'}=$cgi;
+
+  $self->{'pres_param'}=['_usr', '_pw', '_Page', '_Order',
+			 '_Command', '_SubEditFld', '_SubEditVal', '_Maxrows',
+			 '_Orderby', '_Thenby1', '_Thenby2',
+			 ];
+  my $i=0; foreach ($db->tab($self->tab_name)->fld_names()) {
+    push @{$self->{'pres_param'}}, "_Ord".$i;
+  }
+
   $self;
 }
 
@@ -99,12 +109,12 @@ sub link_data {
   my $ret="_Table=" . $self->tab->name;
 
   if ($self->got_cgi) {
-    if (defined $self->cgi->param('_usr')) {
-      $ret.="&_usr=" . $self->cgi->param('_usr') . "&" . 
-	"_pw=" . $self->cgi->param('_pw');
+    foreach (@{$self->{'pres_param'}}) {
+      if (defined $self->cgi->param($_)) {
+				my $val=$self->cgi->param($_);
+				$ret.="&$_=" . uri_escape($val, "^A-Za-z0-9");
+      }
     }
-    $ret.="&_Page=" . $self->cgi->param('_Page') if defined  $self->cgi->param('_Page');
-    $ret.="&_Order=" . $self->cgi->param('_Order') if defined  $self->cgi->param('_Order');
   }
   $ret;
 }
@@ -119,13 +129,15 @@ type=hidden ...> tags to be included in a html form instead.
 sub form_data {
   my $self=shift;
   my $ret='<input type=hidden name="_Table" value="'.$self->tab->name.'">';
+  
   if ($self->got_cgi) {
-    if (defined $self->cgi->param('_usr')) {
-      $ret.='<input type=hidden name="_usr" value="'.$self->cgi->param('_usr').'">' . 
-	'<input type=hidden name="_pw" value="'.$self->cgi->param('_pw').'">';
-    } 
-    $ret.='<input type=hidden name="_Page" value="'.$self->cgi->param('_Page').'">' if defined ($self->cgi->param('_Page'));
-    $ret.='<input type=hidden name="_Order" value="'.$self->cgi->param('_Order').'">' if defined ($self->cgi->param('_Order'));
+    foreach (@{$self->{'pres_param'}}) {
+      if (defined $self->cgi->param($_)) {
+	my $val=$self->cgi->param($_);
+	$ret.='<input type=hidden name="'.$_.
+	  '" value="'. $val.'">';
+      }
+    }
   }
   $ret;
 }
@@ -175,16 +187,21 @@ found in the database if none was defined.
 
 =cut
 
-sub tab {
+sub tab_name {
   my $self=shift;
   my $tab=$self->cgi->param('_Table');
-
   if (!defined $tab) {
     my @t=$self->db->tabs();
     $tab=$t[0]->name;
     $self->cgi->param('_Table',$tab);
   }
-  $self->db->tab($tab);
+  $tab;
+}
+
+sub tab {
+  my $self=shift;
+
+  $self->db->tab($self->tab_name);
 }
 
 1;

@@ -1,3 +1,66 @@
+0.9
+ * Added push and pop functions for the presentation of the fmt 
+   templates to produce an hierarchical interface, much like 
+   common pop-up requesters.
+ * Added README.compiled_fmt describing the special tags avalible 
+   in a compiled fmt.
+ * <sql_val ...> added, which is used to select some arbetrary sql 
+   command and insert into fld.
+ * <fld ...> and <fmt ..> now takes options as name=value which 
+   then are accessable in the below fmt as <var name>.
+ * Added fld options makeing <fld file=filename field> the same as
+   <fmt field>contetnt of file filenmae</fmt>. <fld file=filename>
+   would be a normal file include.
+ * Björn Ardö <f98ba@efd.lth.se> has added:
+     + no_create option to N2N to prevet automatic linktable creation
+     + $dbi->print_only debug mode (See HTMLView::DB man page)
+     + Apache mod_perl support for compiled fmts
+     + extra_{select,from,where} options to SubTab
+ * Giuseppe Costantino <costanti@students.cs.unibo.it> has contributed
+   with quite som additions, including:
+     + Multilevel ordering in CGIListView
+     + Easy to use filtering in CGIListView
+     + Loggin of all database modifications, simply set a logfilename by 
+       $dbi->setlogfile('filename');
+     + Oracle support, simply use OracelDB instead of mysqlDB or msqlDB
+     + Client side javascript sainty checks fld and table specifik (see 
+       exmaple .js files)
+     + Server side perl sainty checks in View.cgi, place in checkparam.
+ * Speeded up seraches that returns a lot of data.
+ * Added a new relationtype called SubTab allowing posts to contain
+   a list of posts form a related table.
+ * Added a short_add feature that lets you specify a fld that
+   describes a add form which is placed at the bottom of the 
+   table listing (see config.pm for eaxmple).
+ * Added a $opt param to the Table constructor to give a few options
+   to it. Currently there are options for specifying which fields to
+   view in a listing (flds_to_view), how many rows per page should
+   be used (rows) and for the short_add feature described above.
+ * Added support for searching multi level relations, eg 
+   Lnk->Link->testf=7.
+ * Optimized fmt handling viewing an fmt with only fields are now 
+   72% faster. The same optimations should be appliable for relations.
+ * Added an Order fld that allows you to specify one order the posts 
+   can be displayed in.
+ * Moved the viewer pointer to the DB class where it's accessable 
+   from everywhere as db->viewer. Which means you should add the
+   following line to old View.cgi scripts before $v->view_html
+   is called: 
+     if ($v->isa('DBIx::HTMLView::CGIView')) {$dbi->viewer($v);}
+ * Added a N2NOrder field that relates a post to a set of posts
+   from another table in a specifik order.
+ * Added a compiler (comp.pl) that compiles a fmt and a search string 
+   into a perlscript that executes up to 8 times faster than 
+   Formated2.cgi. Not all features are supported in compiled fmts
+   though.
+ * Added support to make abetrary selects from compiled fmts 
+   using <sql_select from=... where=... extra=...> construcst.
+ * Added support for <fld ...> tags within <perl>...</perl> code
+   in compiled fmt's.
+ * Perl code in <perl>...</perl> tags are no longer executed with 
+   use strict vars, and all code are executed in the same context 
+   (package fmt_code).
+
 0.7
  * Added a Date field fld.
  * Added patch from "Eric E. Coe" <ecoe@reportweb.com> that makes 

@@ -56,8 +56,22 @@ For a simple example se the Test2.fmt file which will work together
 with the Test2 table from the set of test tabels used by test.pl. To
 view the content of the entire table, try:
 
-  Formated2.cgi?tab=Test2&fmt=Test2
+  Formated2.cgi?tab=Test1&fmt=Test1
 
+This package has over the years grown quite big and quite slow. So
+it's now possible to compile your fmt's into some realy fast perl
+code. This code can then be compiled and placed in memroy reday to be
+presented to the users. This can be done either by the Apache mod_perl
+module Apache::HTMLView avalible on cpan. See it's README for a 
+description on how to set that up. Or by the fmt_srv.pl which is a 
+little webserver written in perl designed to present those fmts and 
+some static html files as fast as possible, which means everything is
+loaded into memory.
+
+For a list of tags you can use when you write your fmt files, see
+README.fmt. Some tags are only avavlible for the compiled fmts and not
+for the fmt used by Formated2.cgi. These are described in
+README.compiled_fmt.
 
 Build and Install
 -----------------
@@ -81,8 +95,11 @@ case you'll of course need DBD::msql instead. You should be able to
 use this system with other database engines as well and in that case
 you'll need their DBD's. 
 
-Usage Overview
+Usage Overview 
 --------------
+
+NOTE: This section is quite out of date and as it does not describe
+the compied fmts which are the sugested way to use this.
 
 This system  is based on a central DBIx::HTMLView::DB object, $db,
 that contains the definition of the database and it's tables. It is

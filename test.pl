@@ -51,6 +51,12 @@ eval {$dbi->send("drop table Test1_to_Test3");};
 eval {$dbi->send("drop table Test1_to_Test4");};
 eval {$dbi->send("drop table Test5");};
 eval {$dbi->send("drop table TreeTest");};
+eval {$dbi->send("drop table SubTab");};
+eval {$dbi->send("drop table SubTest");};
+eval {$dbi->send("drop table SubTab_to_Test4");};
+eval {$dbi->send("drop table Test6");};
+eval {$dbi->send("drop table Test7");};
+eval {$dbi->send("drop table Test7_to_Test");};
 
 # The db in the SQL server is now empty, so let's create the tables
 $dbi->sql_create;
@@ -126,6 +132,9 @@ test($hits->view_text eq "id: $id2\ntestf: 42\n\nid: $id3\ntestf: 13\n");
 $hits=$tab->list("testf>8", "order by testf");
 test($hits->view_text eq "id: $id3\ntestf: 13\n\nid: $id2\ntestf: 42\n");
 
+test($tab->list('testf >= 13','order by id')->view_text eq 
+     "id: 2\ntestf: 42\n\nid: 3\ntestf: 13\n");
+
 # Delete a post
 $tab->del($id3);
 
@@ -166,7 +175,6 @@ test($dbi->tab('Test3')->list(undef,"order by id")->view_text eq
      "id: $id32\nb1: No\nb2: No way\ns: \n\n".
      "id: $id33\nb1: Yes\nb2: No way\ns: hopp\n");
 
-
 test($dbi->tab('Test3')->list(undef,"order by id")->view_html eq 
      "<table border=1><tr><th>id</th><th>b1</th><th>b2</th><th>s</th></tr><tr><td>$id31</td><td>Yes</td><td>Sure</td><td>hej</td></tr><tr><td>$id32</td><td>No</td><td>No way</td><td></td></tr><tr><td>$id33</td><td>Yes</td><td>No way</td><td>hopp</td></tr></table>");
 
@@ -188,6 +196,109 @@ test ($dbi->tab('Test')->count == 3);
 
 # Count the number of posts in Test with tesf greater than 10
 test ($dbi->tab('Test')->count("testf > 10") == 2);
+
+print "\nOrder Flds\n";
+$test_cnt=0;
+
+# Add three posts to Test6 
+my $tab6=$dbi->tab('Test6');
+my $p61=$tab6->new_post;
+$p61->set('tst', 'Testing...');
+$p61->update;
+$id61=$p61->id;
+
+test($tab6->list->view_text eq "tst: Testing...\nOrd1: 1\nOrd2: 1\nid: $id61\n");
+
+my $p62=$tab6->new_post;
+$p62->set('tst', 'Testing2...');
+$p62->update;
+$id62=$p62->id;
+
+my $p63=$tab6->new_post;
+$p63->set('tst', 'My test');
+$p63->update;
+$id63=$p63->id;
+
+test($tab6->list(undef, 'order by Ord1')->view_text eq 
+     "tst: Testing...\nOrd1: 1\nOrd2: 1\nid: $id61\n\ntst: Testing2...\nOrd1: 2\nOrd2: 2\nid: $id62\n\ntst: My test\nOrd1: 3\nOrd2: 3\nid: $id63\n");
+
+# Move last post one step up in Ord1's order
+$p63->fld('Ord1')->move_up;
+
+test ($tab6->list(undef, 'order by Ord1')->view_text eq "tst: Testing...
+Ord1: 1
+Ord2: 1
+id: $id61
+
+tst: My test
+Ord1: 2
+Ord2: 3
+id: $id63
+
+tst: Testing2...
+Ord1: 3
+Ord2: 2
+id: $id62
+");
+
+# Move middle post one step up to the top in Ord1's order
+$p63->fld('Ord1')->move_up;
+
+test($tab6->list(undef, 'order by Ord1')->view_text eq "tst: My test
+Ord1: 1
+Ord2: 3
+id: $id63
+
+tst: Testing...
+Ord1: 2
+Ord2: 1
+id: $id61
+
+tst: Testing2...
+Ord1: 3
+Ord2: 2
+id: $id62
+");
+
+# Move middle post one step down to the bottom in Ord1's order
+$p61=$tab6->get($id61); # It has changed in the db due to the moves above
+$p61->fld('Ord1')->move_down;
+
+test($tab6->list(undef, 'order by Ord1')->view_text eq "tst: My test
+Ord1: 1
+Ord2: 3
+id: $id63
+
+tst: Testing2...
+Ord1: 2
+Ord2: 2
+id: $id62
+
+tst: Testing...
+Ord1: 3
+Ord2: 1
+id: $id61
+");
+
+# Move top post one step down to the middle in Ord2's order
+$p61->fld('Ord2')->move_down;
+
+test($tab6->list(undef, 'order by Ord2')->view_text eq "tst: Testing2...
+Ord1: 2
+Ord2: 1
+id: $id62
+
+tst: Testing...
+Ord1: 3
+Ord2: 2
+id: $id61
+
+tst: My test
+Ord1: 1
+Ord2: 3
+id: $id63
+");
+
 
 print "\nRelations\n";
 $test_cnt=0;
@@ -459,6 +570,7 @@ $post=$tab2->get($id23);
 $v=new DBIx::HTMLView::CGIReqEdit("View.cgi", $post);
 test($v->view_html eq "<form method=POST action=View.cgi><dl><input type=hidden name=_Action value=update><table><input type=submit value=OK><tr><td valign=top><b>id </b></td><td>$id3<input type=hidden name=\"id\" value=\"$id3\"></td></tr><tr><td valign=top><b>str </b></td><td><input name=\"str\" value=\"\" size=80></td></tr><tr><td valign=top><b>nr </b></td><td><input name=\"nr\" value=\"7\" size=80></td></tr><tr><td valign=top><b>Lnk </b></td><td><input type=checkbox name=\"Lnk\" value=$id1 checked> 8<br><input type=checkbox name=\"Lnk\" value=$id2 checked> 42<br><input type=checkbox name=\"Lnk\" value=$id4 checked> 13<br><input type=checkbox name=\"Lnk\" value=$id5 > 77<br><input type=hidden name=\"Lnk\" value=do_edit></td></tr></table><input type=hidden name=\"_Table\" value=\"Test2\"></dl><input type=submit value=OK></from>");
 
+
 # Fake a CGI response make post with id 1 related to 42, 13 and with
 # nr set to 42 but without touching str
 $q=new CGI({'_Action'=>'update', 'id'=>$id21, 'nr'=>42, 
@@ -507,6 +619,7 @@ test($tab2->list(undef, "order by id")->view_text eq
      "id: $id21\nstr: A test post\nnr: 7\nLnk: 42, 13\n\n".
      "id: $id22\nstr: Another test post\nnr: \nLnk: \n\n".
      "id: $id23\nstr: \nnr: 7\nLnk: 8, 42\n");
+
 
 # Select on bool valuse and true edit returned post
 $post=$dbi->tab('Test3')->list("b1='Y' AND b2='0'")->first;
@@ -605,6 +718,28 @@ $post->update;
 # Select with several selected id fields
 test ($tab1->list("Lnk1->id=$id4 AND Lnk2->id=$id23 AND Lnk3->id=$id32 AND Lnk4->id=$id42")->view_text eq "Lnk1: $id4\nLnk2: $id23\nLnk3: $id32\nLnk4: $id42\nid: $id11\n\nLnk1: $id2, $id4\nLnk2: $id21, $id22, $id23\nLnk3: $id31, $id32\nLnk4: $id41, $id42\nid: 3\n");
 
+# Order related data
+test ($tab1->list(undef, undef, undef, 'Lnk1->id desc')->view_text eq 'Lnk1: 3
+Lnk2: 3
+Lnk3: 2
+Lnk4: 2
+id: 1
+
+Lnk1: 2, 3
+Lnk2: 1, 2, 3
+Lnk3: 1, 2
+Lnk4: 1, 2
+id: 3
+
+Lnk1: 1
+Lnk2: 1
+Lnk3: 1
+Lnk4: 1
+id: 2
+');
+
+# FIXME: orber by several related fields
+
 # List all posts related to posts with testf 13 and 42
 #test($tab2->list("Lnk->testf=13 AND Lnk->testf=42", 
 #                 "order by Test2.id")->view_text eq 
@@ -618,6 +753,122 @@ test ($tab1->list("Lnk1->id=$id4 AND Lnk2->id=$id23 AND Lnk3->id=$id32 AND Lnk4-
 #undef tests
 #read only
 
+ctst:
+print "\nTesting compiled fmts\n";
+print "FIXME: These test currently wont work if you dont install first\n";
+$test_cnt=0;
+
+# Simpel fmt to make a oneline list of the Test table
+test(comp('Test', '<node><fld testf> </node>', undef, 'order by id')
+     eq "8 42 13 77 \n");
+
+# Create some data in SubTest and SubTab
+$dbi->send("INSERT INTO SubTest VALUES (1,'Hi')");
+$dbi->send("INSERT INTO SubTest VALUES (2,'Ho')");
+$dbi->send("INSERT INTO SubTab VALUES (1,'First','34',1)");
+$dbi->send("INSERT INTO SubTab VALUES (2,'Second','23',1)");
+$dbi->send("INSERT INTO SubTab VALUES (3,'Third','12',2)");
+
+# Test fmt with SubTab relations
+test(comp('SubTest', "<node><fld Name> Start<fmt Sub><node>\n".
+	  "  <fld Name></node></fmt>\n<fld Name> End\n</node>", 
+	  undef, 'order by SubTest.id') eq 'Hi Start
+  First
+  Second
+Hi End
+Ho Start
+  Third
+Ho End
+
+');
+
+# Test fmt with SubTab relations containing head and foot text
+test(comp('SubTest', "<node><fld Name> <fmt Sub>Start<node>\n".
+	  "  <fld Name></node>\n</fmt><fld Name> End\n</node>", 
+	  undef, 'order by SubTest.id') eq 'Hi Start
+  First
+  Second
+Hi End
+Ho Start
+  Third
+Ho End
+
+');
+
+# Test fmt with SubTab emthy relations
+$dbi->send("INSERT INTO SubTest VALUES (3,'Yo')");
+test(comp('SubTest', "<node><fld Name> <fmt Sub>Start<node>\n".
+	  "  <fld Name></node>\n</fmt><fld Name> End\n</node>", 
+	  undef, 'order by SubTest.id') eq 'Hi Start
+  First
+  Second
+Hi End
+Ho Start
+  Third
+Ho End
+Yo Start
+Yo End
+
+');
+
+# Test fmt with SubTab and simple serach
+test(comp('SubTest', "<node><fld Name> <fmt Sub>Start<node>\n".
+	  "  <fld Name></node>\n</fmt><fld Name> End\n</node>", 
+	  "Name='Hi'", 'order by SubTest.id') eq 'Hi Start
+  First
+  Second
+Hi End
+
+');
+
+# Test fmt with SubTab and serach on related data
+test(comp('SubTest', "<node><fld Name> <fmt Sub>Start<node>\n".
+	  "  <fld Name></node>\n</fmt><fld Name> End\n</node>", 
+	  "Sub->Year=23", 'order by SubTest.id') eq 'Hi Start
+  First
+  Second
+Hi End
+
+');
+
+# Test fmt with N2N Relation
+test(comp('Test1', "<node><fld id>: <fmt Lnk1><node><fld id>, </node></fmt>\n".
+	  "</node>", undef, 'order by Test1.id') eq '1: 3, 
+2: 1, 
+3: 2, 3, 
+
+');
+
+# Test fmt with N2N Relation with select on related data
+test(comp('Test1', "<node><fld id>: <fmt Lnk1><node><fld id>, </node></fmt>\n".
+	  "</node>", "Lnk1->id>2", 'order by Test1.id') eq '1: 3, 
+3: 2, 3, 
+
+');
+
+# Test fmt with multileve Relations
+test(comp('Test4', "<node><fld id>: <fmt Link><node><fld str> ".
+                    "<fmt Lnk><node><fld testf>, </node></fmt>\n</node></fmt>\n".
+                    "</node>", 
+	   undef, 'order by Test4.id desc') eq '2: A test post 42, 13, 
+Another test post 77, 
+ 42, 8, 
+
+1: 
+
+');
+
+# Test fmt with multileve Relations and select on multilevel rel data
+test(comp('Test4', "<node><fld id>: <fmt Link><node><fld str> ".
+                    "<fmt Lnk><node><fld testf>, </node></fmt>\n</node></fmt>\n".
+                    "</node>", 
+	  'Link->Lnk->testf>8', 'order by Test4.id desc') eq '2: A test post 42, 13, 
+Another test post 77, 
+ 42, 8, 
+
+
+');
+
 print "\nTotal: $tot_ok tests was successful and $tot_fail test failed\n";
 # Used to print the results
 sub test {
@@ -630,6 +881,16 @@ sub test {
     print "not ok $test_cnt\n";
   }
 }
+
+sub comp {
+  my ($tab, $fmt, $sel, $extra)=@_;
+  $sel=~s/\'/\'\"\'\"\'/g;
+  $fmt=~s/\'/\'\"\'\"\'/g;
+  $extra=~s/\'/\'\"\'\"\'/g;
+
+  return `echo '$fmt' | ./comp.pl $tab - '$sel' '$extra'| perl -Iblib/arch -Iblib/lib`;
+}
+
 #  LocalWords:  ListView's sql nstr nnr nLnk
 
 # Bool, Modified bool, modified sql size, modified edit size
