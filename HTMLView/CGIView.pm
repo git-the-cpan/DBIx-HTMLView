@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
-#  CGIView.pm - For creating CGI userinterfacees to DBI databases.
-#  (c) Copyright 1998 Hakan Ardo <hakan@debian.org>
+#  CGIView.pm - Common CGI functions for the viewers
+#  (c) Copyright 1999 Hakan Ardo <hakan@debian.org>
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -19,117 +19,141 @@
 
 =head1 NAME
 
-  DBIx::HTMLView::CGIView - For creating CGI userinterfacees to DBI databases.
+  DBIx::HTMLView::CGIView - Common CGI functions for the viewers
 
 =head1 SYNOPSIS
 
-package MyCGIViewer;
+package MyCGIViewer
 
-use DBIx::HTMLView::CGIView;
-@ISA = ("DBIx::HTMLView::CGIView");
+require DBIx::HTMLView::CGIView;
+@ISA = qw(DBIx::HTMLView::CGIView);
 
 sub new {
-	my ($class,$db,$fmt,$query)=@_;
-	my $self  = $class->SUPER::new($db,$fmt,$query);
+  my $self=DBIx::HTMLView::CGIView::new(@_);
 
-  my $table=$self->{'Form'}{'_Table'};
-	$self->InitDb($table);
-
-	return $self;
+  # ...
 }
-
-
-sub PrintPage {
-	my ($self, $script) =@_;
-
-	# Generate page...
-  foreach ($self->List("SELECT * FROM $self->{'Form'}{'_Table'}",', ')) { 
-	  print "$_->[1]: ". $self->ml($script, $_->[0], "Show") . "<br>\n";
-  }
-
-  $self->Foot();
-}
-
-# Overriden and new methods follow here...
-
-# And then to test it
-use CGI;
-use MyCGIViewer;
-
-my $query=new CGI({'_Table' => 'Test'});
-my $db="DBI:mSQL:HTMLViewTester:athena.af.lu.se:1114";
-new MyCGIViewer($db, {}, $query)->PrintPage("View.cgi");
 
 =head1 DESCRIPTION
 
-This is a subclass of DBIx::HTMLView to create cgi interfaces.
+This class some basic functions that can be used to create cgi
+interfaces to a HTMLView database. And is therefor suited as a base
+class for viewr or edit classes.
 
 =head1 METHODS
-
 =cut
 
 package DBIx::HTMLView::CGIView;
-use CGI;
+use strict;
+use Carp;
 
-use DBIx::HTMLView;
-@ISA = ("DBIx::HTMLView");
+=head2 $view=DBIx::HTMLView::CGIView->new($script, $db, $cgi)
 
-
-=head2 $v=new DBIx::HTMLView::CGIView($db,$fmt,$query);
-
-Creates a new CGIView object passing $db and $fmt to the DBIx::HTMLView
-constructor. It will also take care of the CGI input in $query, which 
-should be a new CGI object, and place the key/value pairs in a hash in 
-$v->{'Form'}, and call the $v->Head method to generate the headder.
-
-It also makes sure thet the current table in the _Table varibale in 
-$query is svaed in future calls by using SetParam.
+Creates a new CGIView object that will use the url $script for future
+requests to the database $db (a DBIx::HTMLVIew::DB object) and $cgi is
+the CGI object containing the request we got from the user.
 
 =cut
+
 
 sub new {
-	my ($class,$db,$fmt,$query)=@_;
-	my $self  = $class->SUPER::new($db,$fmt);
-	my $form={};
+	my $this = shift;
+	my $class = ref($this) || $this;
+	my $self=       bless {}, $class;
 
-	foreach ($query->param) {
-		$form->{$_}=$query->param($_);
-	}
-	$self->{'Form'}=$form;
-	$self->SetParam("_Table", $form->{'_Table'});
-
-	$self->Head;
-
-	bless ($self, $class);          # reconsecrate
-	return $self;
+	my ($script, $db, $cgi)=@_;
+  $self->{'script'}=$script;
+	$self->{'db'}=$db;
+	$self->{'cgi'}=$cgi;
+  $self;
 }
 
-=head2 $v->Head
+=head2 $view->script
+=head2 $view->script_name
 
-Prints the page headder to stdout. The idea is to override this method if
-you want to chnage the headder. 
+Returns the name of the script we should use for future calls as set
+by the $script param to the constructor.
 
 =cut
-sub Head {
-	print << "EOF";
-<html><head><title>DBI Interface</title></head><body>
-EOF
+
+sub script {shift->script_name(@_)}
+sub script_name {
+  my $self=shift;
+  confess ("No script defined") if (!defined $self->{'script'});
+  $self->{'script'};
 }
 
-=head2 $v->Foot
+=head2 $view->lnk
+=head2 $view->link_data
 
-Prints the page footer to stdout. The idea is to override this method if
-you want to chnage the footer.
+Returns a string that can be included in a link that will set the
+params that is supposed to be presistand between requests. Curent that
+is only one: _Table which is set to the name of the table we are
+currently working on.
 
 =cut
-sub Foot {
-	print "</body></html>\n";
+
+sub lnk {shift->link_data(@_)}
+sub link_data {
+  my $self=shift;
+  "_Table=" . $self->tab->name;
 }
 
-=head1 Author
+=head2 $view->form_data
 
-  Hakan Ardo <hakan@debian.org>
+Will return the same data as $view->link_data but in form of <input
+type=hidden ...> tags to be included in a html form instead.
 
 =cut
+
+sub form_data {
+  my $self=shift;
+  '<input type=hidden name="_Table" value="'.$self->tab->name.'">';
+}
+
+=head2 $view->db
+
+Returns the database (a DBIx::HTMLView::DB object) we'r using, as set
+by the $db parameter to the constructor.
+
+=cut
+
+sub db {
+  my $self=shift;
+  confess "No db defined!" if (!defined $self->{'db'});
+  $self->{'db'};
+}
+
+=head2 $view->cgi
+
+Returns the CGI object as set by the $cgi parameter to the constructor.
+
+=cut
+
+sub cgi {
+  my $self=shift;
+  confess "No cgi defined!" if (!defined $self->{'cgi'});
+  $self->{'cgi'};
+}
+
+=head2 $view->tab
+
+Returns the table (a DBIx::HTMLView::Table object) we're currently
+working with. Either as specified in the CGI query or the first table
+found in the database if none was defined.
+
+=cut
+
+sub tab {
+	my $self=shift;
+  my $tab=$self->cgi->param('_Table');
+
+	if (!defined $tab) {
+    my @t=$self->db->tabs();
+    $tab=$t[0]->name;
+    $self->cgi->param('_Table',$tab);
+  }
+	$self->db->tab($tab);
+}
 
 1;

@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
 #  CGIListView.pm - A List user interface for DBI databases
-#  (c) Copyright 1998 Hakan Ardo <hakan@debian.org>
+#  (c) Copyright 1999 Hakan Ardo <hakan@debian.org>
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -23,121 +23,148 @@
 
 =head1 SYNOPSIS
 
-use DBIx::HTMLView::CGIListView;
-my @tabels = ("Test", "Test2");
-my $db="DBI:mSQL:HTMLViewTester:athena.af.lu.se:1114";
-
-$c=new DBIx::HTMLView::CGIListView($db, {}, new CGI(), \@tabels);
-$c->PrintPage("this_file.cgi");
+	$view=new DBIx::HTMLView::CGIReqEdit($script, $dbi, $cgi);
+  print $view->view_html;
 
 =head1 DESCRIPTION
 
-This is a CGI interface based on the CGIView class (eg a subclass of) that 
-allows you to select one table from a list at the top and lists the posts of
-that table at the botton with Show, Edit and Delete buttons for every line
-and below that a Add button allowing you to add new posts.
+This is a database viewer/editer using the CGI interface and HTML
+forms to present the user interface to the user. It's a very simple
+interface. At the top all the tabels of the database is listed to
+allow the user to select which one to edit, and at the botom the
+selected table is listed. Every post has a link to allow you to show,
+edit or delete them. There is also a link to add new posts to the
+table. 
 
+To be able to use this you need a cgi script that sets up a few things
+and decides which editor to use to edit single posts and to insert
+default values and so on... For a simple such script see View.cgi.
+
+This is a subclass to DBIx::HTMLView::CGIView so for methods defined
+ther se it's manpage. 
 =head1 METHODS
-
 =cut
 
 package DBIx::HTMLView::CGIListView;
+use strict;
 
-use DBIx::HTMLView::CGIView;
-@ISA = ("DBIx::HTMLView::CGIView");
-
-
-=head1 $c=new DBIx::HTMLView::CGIListView($db, $fmt, $query, $tabs)
-
-Initiats the viewer. $db and $fmt is the database specifier and format
-specification as descriped in the DBIx::HTMLView manual. $query is the 
-cgi query as returned by "new CGI;". $tabs is an array reference to an 
-array listing the table that should show up in list at the top. 
-
-
-=cut
+use vars qw(@ISA);
+require DBIx::HTMLView::CGIView;
+@ISA = qw(DBIx::HTMLView::CGIView);
 
 sub new {
-	my ($class,$db,$fmt,$query,$tabs)=@_;
-	my $self  = $class->SUPER::new($db,$fmt,$query);
+  my $self=DBIx::HTMLView::CGIView::new(@_);
 
-	my $form=$self->{'Form'};
-
-	if ($form->{'_SetTable'}) {$form->{'_Table'}=$form->{'_SetTable'};}
-	if (!$form->{'_Table'}) {$form->{'_Table'}=$tabs->[0];}
-	
-	$self->InitDb($form->{'_Table'});
-	$self->SetParam("_Table", $form->{'_Table'});
-	$self->{'Lst'}="SELECT * FROM $form->{'_Table'}";
-	$self->{'Tabels'}=$tabs;
-
-	return $self;
+  $self->{'view_flds'}=undef;
+  $self->{'extra_sql'}=undef;
+  $self;
 }
 
-=head1 $c->PrintPage($script)
+=head2 $view->flds_to_view(@flds)
 
-Will print the html page, with links back to the cgi script $script. It is 
-possible to chnage the contents of the list before calling this by chnaging
-the $self->{'Lst'} variable to a diffrent select query, before calling this
-method. The query has to select the table id as it's first variable. All 
-other selected variables will be displayed in the list.
-
-This method will also preform any Add, Change or Delete requests as made by 
-the CGIReqView interface.
+Specifys which flds to view by listing there names. Default is to view
+all fields of a post but none of the relations.
 
 =cut
 
-sub PrintPage {
-	my ($self, $script) = @_;
-	my $form=$self->{'Form'};
-
-	$self->Preform($form);
-
-	print << "EOF";
-<h1>Current table: $form->{'_Table'}</h1>
-
-<form method=POST>
-  <b>Change table</b>: 
-EOF
-
-	foreach (@{$self->{'Tabels'}}) {
-		print "<input type=submit name=_SetTable   value=\"$_\">\n";
-	}
-
-print << "EOF";
-  <p>
-</form>
-	
-<form method=POST>
-  <B>SQL</b>: <input name="_Command" VALUE='$form->{'_Command'}'>
-  <input type=submit name="_Search"  value="Search">
-  <input type=hidden name="_Search" value="!">
-        <input type=hidden name="_Table" value="$form->{'_Table'}">
-</form>
-
-<hr>
-EOF
-
-	my $lst;
-	if ($form->{'_Search'}) {
-		$lst=$form->{'_Command'}
-	} else {
-		$lst=$self->{'Lst'};
-	}
-	
-	print "<table>\n";
-	foreach ($self->List($lst,'<td>')) { 
-		print "<tr><td>$_->[1]<td>" . 
-			$self->ml($script, $_->[0], "Show") . 
-				$self->ml($script, $_->[0], "Edit") .
-					$self->ml($script, $_->[0], "Delete") .  "</tr>\n";
-	}
-	print "</table>\n" . $self->ml($script, -1, "New") . "\n";
-	$self->Foot;
+sub flds_to_view {
+  my $self=shift;
+  my @flds=@_;
+  $self->{'view_flds'}=\@flds;
 }
 
-=head1 Author
+=head2 $view->extra_sql($extra)
 
-  Hakan Ardo <hakan@debian.org>
+If you want to add som extra SQL clauses to the end of the select
+command they can be given here. This can be used to specify in which
+order the posts should appear by giving an ORDER clause.
 
 =cut
+
+sub extra_sql {
+  my $self=shift;
+  $self->{'extra_sql'}=shift;
+}
+
+=head2 $view->restrict_tabs($tabs_to_show)
+
+If you don't want all tabels to show up at the top of the editor you
+can here specify which you want there by letting $tabs_to_show be an
+array ref to an array liste the names of those tabels.
+
+Note that this is not a secure way to prevent users from getting
+access to the tables as some simple tampering with the html forms
+passed to the user will bring up the other tabels as well for editing.
+
+=cut
+
+sub restrict_tabs {
+  my $self=shift;
+  $self->{'restrict_tabs'}=shift;
+  if (!defined $self->cgi->param('_Table')) {
+    $self->cgi->param('_Table',  $self->{'restrict_tabs'}[0]);
+  }
+}
+
+=head2 $view->view_html
+
+Returns the html code for the editor as specified by previous methods.
+
+=cut
+
+sub view_html {
+	my ($self)=@_;
+	my $q=$self->cgi;
+  my $script=$self->script_name;
+  my $tab=$self->tab->name;
+  my $res =  << "EOF";
+<h1>Current table: $tab</h1>
+
+<b>Change table</b>: 
+EOF
+
+	$res .= "<form method=POST action=\"$script\">";
+  if (defined $self->{'restrict_tabs'}) {
+  	foreach (@{$self->{'restrict_tabs'}}) {
+  	  $res .= '<input type=submit name=_Table value="' . $_ . '">';
+    }
+  } else {
+  	foreach ($self->db->tabs) {
+	  	$res .= '<input type=submit name=_Table value="' . $_->name . '">';
+  	}
+  }
+  $res .= '</form>';
+
+my $cmd=$q->param('_Command');
+if (!defined $cmd) {$cmd=""}
+$res .= << "EOF";
+<p>
+<form method=POST action="$script">
+  <B>Search</b>: <input name="_Command" VALUE="$cmd">
+	<input type=hidden name="_Action"  value="search">
+  <input type=submit value="Search">
+EOF
+
+$res .= $self->form_data . "</from><hr>";
+	
+	my $hits;
+  my $lst=undef;
+  my $act=$q->param('_Action');
+	if (defined $act && $act eq 'search') {
+    $lst=$q->param('_Command');
+	} 
+	$hits=$self->db->tab($tab)->list($lst,$self->{'extra_sql'},
+                                   $self->{'view_flds'});
+	$res .= $hits->view_html(
+    '<a href="'.$script.'?_id=$id&_Action=show&'.$self->lnk.'">Show</a> '.
+    '<a href="'.$script.'?_id=$id&_Action=edit&'.$self->lnk.'">Edit</a> '.
+    '<a href="'.$script.'?_id=$id&_Action=delete&'.$self->lnk.'">Delete</a> ',
+    $self->{'view_flds'}
+  );
+  $res .= '<a href="'.$script.'?_Action=add&'.$self->lnk.'">Add</a> ';
+  $res;
+}
+
+1;
+
+

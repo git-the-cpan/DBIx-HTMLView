@@ -1,0 +1,16 @@
+Set HEAD
+'<html><head><title>Test2</title></head><body>';
+Set NODE
+$nr=$_->fld('nr')->view_html;
+$str=$_->fld('str')->view_html;
+$Lnk=$_->fld('Lnk')->view_html;
+"
+<table border=1>
+<tr><td>$nr</td><td>$str</td></tr>
+<tr><td colspan=2>$Lnk</td></tr>
+</table>
+<p>
+"
+Set FOOT
+'</body></html>'
+

@@ -15,44 +15,102 @@ You should have received a copy of the GNU General Public License
 along with this program; if not, write to the Free Software
 Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
+
 Description
 -----------
 
-This is a general propose module to simplify the creation of web
-userinterfaces to a DBI database, currently it can list, view, add,
-edit and delete entries in the databse using either <input ...> or
-<textarea> to gather the info.
+HTMLView is a set of modules to handle relational SQL databases
+through a DBI interface and create web userinterfaces to them. Among
+it's features are the possibility to handle relations in the same
+manner as fields and it is easily extended with additional field or
+relation specifications as well as custom editors and viewers.
 
-It can also edit N2N relations between two tabels using a third table
-to represent the connections.
-
-It's actions is highy customizable by using a database definition 
-where most things are specified and by beeing designed to easily 
-allow subclassing in order to change it's behaviour.
-
-It is constructed as a set of objects that could be considered 
-editors or viewers. Those objects can either be used as they are
-or be subclassed if they can be customized enough for your needs.
-See the View.cgi example for the simples posible use that gields a 
-quite powerfull cgi based editor.
-
-Se the documentation for DBIx::HTMLView for a more detailed 
-description and the docs on the sub class to find the properties of
-the diffrent editors. There is also a QuickStart tutorial that step 
-by step takes you through the creation of a database.
-
-To use this with your databases you need a DBI interface to your 
-database. DBI can be found at CPAN together with a driver located 
-in DBD.
 
 Build and Install
 -----------------
 
-All you have to do to build, test and install this stuff is:
+All you have to do to build, test and install this stuff, if your
+connected to the Internet, is:
 
 perl Makefile.pl
 make
 make test
 make install
 
+This will run the tests on a remote server so if you're not connected
+they will fail. Se the config.pm file on how to set up a local db in
+that case.
 
+Usage Overview
+--------------
+
+This system  is based on a central DBIx::HTMLView::DB object, $db,
+that contains the definition of the database and it's tables. It is
+constructed with the shortcuts in the DBIx::HTMLView package (se it's
+manpage for details). This object is defined in config.pm for the test
+database and then that file used by both the test.pl script and the
+example cgi scripts.
+
+Each table inside the database class is defined with a
+DBIx::HTMLView::Table object $tab which you'll get hold of with
+$db->tab('table name'). This object can then be used the list the
+posts in that table using $tab->list. That will return a
+DBIx::HTMLView::PostSet object with the posts in form of
+DBIx::HTMLView::Post objects.
+
+Post and Table object are in build up of several DBIx::HTMLView::Fld
+objects describing the fields and relations. For Posts this object
+contains both the structure of it and the data contained in them. In 
+the case of the Table it's of course only the structure. Those Fld
+objects are returned by the fld('fld name') method that is defined
+both for Table and Post objects.
+
+To then view your data there is the method view_html that is defined
+for the PostSet, Post, and Fld objects allowing you to build your
+viewers at any level.
+
+To build you're html editors there are the edit_html method of the Fld
+objects that will return an <input ...> string to be placed in a html
+<form> construction to edit that Fld.
+
+Then there are two standard editors one for the entire database,
+DBIx::HTMLView::CGIListView, which then calls another editor, usually
+the DBIx::HTMLView::CGIReqEdit editor that's used for editing single
+posts. 
+
+All this is controlled by the View.cgi script which decides what
+editors should be used and when. It also sets all the parameters to
+the editors and can be used to give flds default values or make sanity 
+checks on the data typed by the user.
+
+The Formated.cgi script is used to generate nicely formated output,
+both viewers and editors, specified by a separate .fmt file. The .fmt
+file contains three fields: HEAD, NODE and FOOT (se the example
+Test2.fmt on how to defined them). All tree of them is supposed to
+contain perl code that is executed at appropriate times. HEAD is
+executed as the first thing done, NODE once for ever matched post with 
+$_ set to the current DBIx::HTMLView::Post object and FOOT at the end.
+
+There is three ways to specify which posts should be viewed. Both is
+done through setting cgi variables. Either you set the sel to a
+search string as expected by the DBIx::HTMLView::Table::list method, or 
+you set flds to a coma-separated (ie ", ") list of flds and query to a 
+string which should be search for in all those flds. Finely you can
+leave everything empty and all posts will be displayed.
+
+
+Mailinglist
+-----------
+
+There is a mailing list for announcements and questions about HTMLView 
+if you have any problems using it or questions about it you can mail
+to htmlview@af.lu.se. If you want to subscribe to that list send a
+mail to majordomo@af.lu.se with the body:
+
+  subscribe htmlview <your email address>
+
+
+Author
+------
+
+  Håkan Ardö <hakan@debian.org>

@@ -1,3 +1,38 @@
+0.4 
+  The interface has been rearrange into a more natural structure, based
+  on DB, Table, Post, Field ... objects instead of just a bunch of
+  commonly used procedures. The idea is to be able to handle relations
+  and fields in the same way whenever possible and to make it easy to
+  add custom Field, Database or Relation objects handling different
+  kinds of fields or relation or even database handling routines.
+
+	All the features of the old HTMLView code is still there, plus quite 
+  a few new ones (see the docs). As for the previous TODO list what
+  I've got into this new stuff is just the following things:
+
+  * Move all Post handling to to HTMLView::Post and use it.
+
+      As I said all methods are now split up into this kind of objects
+
+  * Autodetect the part of $flds that's in $where in HTMLView::ViewList
+
+      Actually the selection code is much more advanced now, you just
+      specify the where clause (which might even contains field names
+      like 'group->name' to match the name field in a related table
+      through the relation group)
+
+  * List methods that might have to be changed if using a different DBD
+
+      Actually they're all placed in a separate DB class which can be
+      subclassed and the methods needing changing can be overloaded.
+
+0.3
+  * Added HTMLView::ViewData method for simplifying wrting customized 
+    viewing scripts.
+  * Added example script Formated.cgi for viewing posts in a formated 
+    way.
+  * Added HTMLView::ViewList method that allows you to simply make complex
+    relation based searchings and then disply the result.
 0.2
   * Wrote a QuickStart tutorial taking you through the first steps of 
     setting up an database interface.
@@ -6,6 +41,6 @@
   * Corrected some old out of date statements in the docs as reported by 
     Ronald Emaus <Ronald.Emaus@wl.com>.
   * Cleand up the docs
-	* Some code cleanup and bugfixes
+        * Some code cleanup and bugfixes
 0.1
   * First public release.
