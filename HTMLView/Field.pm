@@ -71,7 +71,7 @@ sub edit_size  {
 sub val {
 	my $self=shift;
 
-	croak "Field contains no data" if (!defined $self->{'val'});
+	confess "Field contains no data" if (!defined $self->{'val'});
 	$self->{'val'};
 }
 
@@ -85,34 +85,13 @@ sub got_val {
 	(defined shift->{'val'});
 }
 
-sub view_text {
-	my $self=shift;
-	if ($self->got_val) {
-		return $self->val
-	} else {
-		return "";
+sub default_fmt {
+	my ($self, $kind)=@_;
+	if ($kind eq 'edit_html') {
+		return 	'<input name="<var name>" value="<perl>js_escape($self->var("val"))</perl>" size='.	
+			$self->edit_size . '>';
 	}
-}
-
-sub view_html {
-	shift->view_text(@_);
-}
-
-sub edit_html {
-	my $self=shift;
-	my $val="";
-
- 	$val=$self->val if ($self->got_val);
-	'<input name="' . $self->name . '" value="'. js_escape($val) .'" size='.
-	$self->edit_size . '>';
-}
-
-# FIXME: Move this to a different module!
-# Escapes "'s
-sub js_escape {
-    my $str = shift;
-    $str =~ s/"/&quot;/g;
-    return $str;
+	return DBIx::HTMLView::Fld::default_fmt(@_);
 }
 
 sub sql_data {
@@ -127,5 +106,39 @@ sub del {}
 sub field_name{shift->name}
 
 sub post_updated{}
+
+=head2 $fld->view_fmt($fmt_name, $fmt)
+
+Se DBIx::HTMLView::Fld for a general description. As for the format of
+the fmt string used here, the following substrings will be replaced
+with described values:
+
+$val - The value of this field
+$name - The name of this field
+
+=cut
+
+sub view_fmt {
+	my ($self, $fmt_name, $fmt)=@_;
+	my $val;
+
+	if (!defined $fmt) {$fmt=$self->fmt($fmt_name);}
+
+	my $p=DBIx::HTMLView::Fmt->new;
+	return $p->parse_fmt($self, $fmt_name, $fmt);
+}
+
+sub var {
+	my ($self, $var) =@_;
+	if (lc($var) eq 'val') {
+		return $self->val if ($self->got_val);
+		return "";
+	}
+	if (lc($var) eq 'name') {
+		return $self->name;
+	}
+	return "";
+}
+
 1;
 

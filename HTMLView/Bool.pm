@@ -73,40 +73,27 @@ sub view_true {
 }
 sub view_false {
   my $self=shift;
+
   if ($self->got_data('view_false')) {return $self->data('view_false')}
   return 'No';
 }
 
-sub edit_html {
-	my ($self)=@_;
+sub default_fmt {
+	my ($self, $kind)=@_;
+	if ($kind eq 'view_text' || $kind eq 'view_html') {
+		return 	'<perl>if ($self->got_val && $self->val eq $self->true) {return $self->view_true} else {return $self->view_false}</perl>';
+	} 
+	if ($kind eq 'edit_html') {
+    return '<perl>if ($self->got_val && $self->val eq $self->true) {'.
+                   '$val2="";$val1="checked"} else {$val1="";$val2="checked"}'.
+           '"";</perl>'.
+           "<input type='radio' name='<var name>' value='" . $self->true .
+				   "' <perl>\$val1</perl> >" . $self->view_true . "&nbsp;&nbsp;" . 
+           "<input type='radio' name='<var name>' value='" . $self->false .
+					 "' <perl>\$val2</perl>>" . $self->view_false;
 
-	my $name = $self->name;
-
-	my $val="";
-	$val=$self->val if ($self->got_val);
-
-	my $val1="";
-	my $val2="checked";
-    if( $val eq $self->true ) {
-        $val1="checked";
-        $val2="";
-    }
-
-    return "<input type='radio' name='$name' value='" . $self->true .
-				   "' $val1 >" . $self->view_true . "&nbsp;&nbsp;" . 
-           "<input type='radio' name='$name' value='" . $self->false .
-					 "' $val2>" . $self->view_false;
-}
-
-sub view_text {
-  my $self=shift;
-	my $val="";
-	$val=$self->val if ($self->got_val);
-  if( $val eq $self->true ) {
-    return $self->view_true;
-  } else {
-    return $self->view_false;
   }
+	return DBIx::HTMLView::Field::default_fmt(@_);
 }
 
 sub sql_create {my$self=shift;$self->db->sql_type("Bool",$self)}

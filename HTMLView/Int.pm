@@ -19,7 +19,7 @@
 
 =head1 NAME
 
-  DBIx::HTMLView::Str - An integer field
+  DBIx::HTMLView::Int - An integer field
 
 =head1 SYNOPSIS
 
@@ -45,7 +45,9 @@ require DBIx::HTMLView::Field;
 
 sub name_vals {
 	my $self=shift;
-	({name=>$self->name, val=> $self->val });
+	my $val=$self->val;
+	if ($val eq "") {$val="NULL"}
+	({name=>$self->name, val=> $val });
 }
 
 sub sql_create {my $self=shift;$self->db->sql_type("Int",$self)}

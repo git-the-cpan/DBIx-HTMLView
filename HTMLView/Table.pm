@@ -177,6 +177,46 @@ sub list {
 	$self->sql_list($select);
 }
 
+=head2 $table->noid_list($search, $extra, $flds)
+	
+Works in a simluar way that $table->list, but it will not add the id
+field to flds select, and it will do a distinct select. The posts
+returned are some kind of psevdo posts. If you try to modify and update 
+them and the new posts will be added to the db as they have no id.
+
+Will currently not work with relations (FIXME). It will never work with 
+N2N relations as they requier the id selected in order to find the 
+related posts.
+
+
+=cut
+
+sub noid_list {
+	my ($self, $search, $extra, $flds)=@_;
+	my $fld='';
+	my $select;
+
+	if (defined $flds) {
+		foreach (@$flds) {
+			my $n=$self->fld($_)->field_name;
+			if (defined $n){$fld.="$n, " ;}
+		}
+	} else {
+		$fld='*';
+	}
+	$fld =~ s/, $//g;
+
+	$select="select distinct $fld from " . $self->name;
+
+	if (defined $search) {
+		$select.=" where " . $search;
+	} 
+	if (defined $extra) {$select.=" " .$extra;}
+
+	$self->sql_list($select);
+}
+
+
 =head2 $table->sql_list($select)
 
 Sends $select, which should be a select clause on this table,to the 
@@ -187,6 +227,8 @@ You should use the list method insted. It gives you a smooter interface.
 
 sub sql_list {			
 	my ($self, $select)=@_;
+
+#	print "sel=$select\n";
 
  	my $sth=$self->db->send($select);	
 
@@ -257,7 +299,7 @@ sub fld {
 	foreach (@{$self->{'flds'}}) {
 		if ($_->name eq $fld) {return $_;}
 	}
-	die "Field not found: $fld";
+	confess "Field not found: $fld";
 }
 
 =head2 $table->got_fld($fld)
@@ -366,5 +408,76 @@ sub sql_create {
 	$self->db->sql_create_table($self)
 }
 
+=head2 $table->post_fmt($kind)
+
+Returns a fmt for viewing a post from this table in the 
+$kind format. It can be specified in ... FIXME: where?
+
+=cut
+
+sub post_fmt {
+	my ($self,$kind) =@_;
+	if (defined $kind && $kind eq 'view_text') {
+		my $res="";
+		foreach ($self->fld_names) {
+			$res.="$_: <fld $_>\n";
+		}
+		return $res;
+	} else {
+		my $res="<table>";
+		foreach my $fld ($self->fld_names) {
+			$res.="<tr><td valign=top><b>$fld</b></td><td><fld $fld></td></tr>\n";
+		}
+		$res.="</table>";
+		return $res;
+	}
+}
+
+=head2 $table->list_fmt($kind, $butt, $flds)
+
+Returns a fmt for viewing a set of posts from this table in the 
+$kind format. It can be specified in ... FIXME: where?
+
+The default fmt will consist of a table with one colume per Fld specified 
+in the arrayref $flds. If it is not defined all Fld will be viewed.
+
+$butt can be used to specify the contents of an extra colum to the right 
+of the rest. To for example contain the view, edit and delete buttons.
+
+=cut
+
+sub list_fmt {
+	my ($self, $kind, $butt, $flds) = @_;
+	if (defined $kind && $kind eq 'view_text') {
+		return "<node join=\"\n\"></node>";
+	} else {
+	  my $res="<table border=1>";
+  	my @flds;
+	
+	  if (defined $flds) {
+		  @flds=@$flds;
+  	} else {
+	  	@flds=$self->fld_names;
+  	}
+
+	  $res.="<tr>";
+  	foreach (@flds) {
+	  	$res.="<th>" . $_ . "</th>";
+  	}
+	  $res.="</tr>";
+
+  	$res.="<node><tr>";
+	  foreach (@flds) {
+		  $res.="<td><fld " . $_ . "></td>";
+  	}
+	  if (defined $butt) {
+		  $res.="<td>$butt</td>";
+  	}
+	  $res.="</tr></node>";
+
+  	$res.="</table>";
+	  return $res;
+	}
+}
 1;
 

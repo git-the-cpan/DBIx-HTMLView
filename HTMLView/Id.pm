@@ -55,14 +55,15 @@ use vars qw(@ISA);
 require DBIx::HTMLView::Int;
 @ISA = qw(DBIx::HTMLView::Int);
 
-sub edit_html {
-	my $self=shift;
-	if (defined $self->{'val'}) {
-		return $self->view_html.
-			'<input type=hidden name="'.$self->name.'" value="'.$self->val.'">';
-	} else {
-		return "";
+sub default_fmt {
+	my ($self, $kind)=@_;
+	if ($kind eq 'edit_html') {
+		return 	$self->fmt('view_html') . 
+			'<perl>if ($self->got_val) { return ' .
+				'"<input type=hidden name=\"".$self->name . "\" value=\"".$self->var("val")."\">"' . 
+			'} </perl>';
 	}
+	return DBIx::HTMLView::Field::default_fmt(@_);
 }
 
 # FIXME: Make all Flds pass on ther $self vars like this

@@ -86,13 +86,13 @@ sub height {
 	}
 }
 
-sub edit_html {
-	my ($self)=@_;
-	my $val="";
-
-	$val=$self->val if ($self->got_val);
-	'<textarea wrap=soft cols=' . $self->width . ' rows='.$self->height.
-	' name="'.$self->name.'">'.$val.'</textarea>'
+sub default_fmt {
+	my ($self, $kind)=@_;
+	if ($kind eq 'edit_html') {
+		return 		'<textarea wrap=soft cols=' . $self->width . ' rows='.
+			$self->height.' name="<var name>"><var val></textarea>';
+	}
+	return DBIx::HTMLView::Field::default_fmt(@_);
 }
 
 sub sql_create {my $self=shift;$self->db->sql_type("Text",$self)}

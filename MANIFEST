@@ -2,12 +2,13 @@ MANIFEST
 TODO
 NEWS
 README
+README.fmt
 Formated.cgi
 Test2.fmt
 Makefile.PL
-View.cgi
 config.pm
 test.pl
+View.cgi
 HTMLView.pm
 HTMLView/CGIListView.pm
 HTMLView/CGIReqEdit.pm
@@ -28,3 +29,6 @@ HTMLView/Text.pm
 HTMLView/mysqlDB.pm
 HTMLView/msqlDB.pm
 HTMLView/Bool.pm
+HTMLView/N2One.pm
+HTMLView/Fmt.pm
+

@@ -58,6 +58,8 @@ use vars qw(@ISA);
 require DBIx::HTMLView::Relation;
 @ISA = qw(DBIx::HTMLView::Relation);
 
+require DBIx::HTMLView::Fmt;
+
 =head2 $fld=DBIx::HTMLView::N2N->($name, $data)
 =head2 $fld=DBIx::HTMLView::N2N->new($name, $val, $tab)
 
@@ -76,16 +78,22 @@ id_name - The name of the link post id field in the link table. Default
    is "id".
 view - String used when viewing a related post withing the post being 
    viewed (eg the groups list of a user post). All $<fld name> constructs 
-   will be replaced with the data of the post beeing viewed.
+   will be replaced with the data of the post beeing viewed. Obsolete, use 
+   the fmt param instead.
 join_str - As a post can be related to several other and each will be 
    viewed using the view string above and then joined together using this 
-   string as glue. Default is ", ".
+   string as glue. Default is ", ".  Obsolete, use the fmt param instead.
+fmt - Specifies the fmt string to be passed to view_fmt of the PostSet 
+   object representing the posts we are related to. For backwards 
+   compatibility it defaults to "<node join="$join_str">$view</node>", 
+   if $view is defined. $view and $join_str are the var defined above.
 extra_sql - Extra sql code passe to the list method when listing related 
    posts. This can for example be used to specify in which order related 
    posts should be viewed. Default is "ORDER BY <to table id name>".
 
-As you se, it is only tab and view that does not have any default valu, 
-so those two has to be defined within the table declaration.
+As you se, it is only tab that does not have any default value, 
+so it has to be defined within the table declaration, it's usually also a
+good idea to specify fmt to something decent as well.
  
 =cut
 
@@ -365,72 +373,62 @@ sub posts {
 	@posts;
 }
 
-=head2 $fld->rel_post_view($p)
+=head2 $fld->view_fmt_edit_html($postfmt_name, $postfmt)
 
-Will generate a view of the post $p, as described by the view
-parameter specified in the $data parameter to the constructor.
+Used by the default edit_html fmt. It will return a string containing 
+"<input type=checkbox ...>" constructs to allow the user to specify
+which posts we should be related to. All posts in the to table will 
+be listed here and viewed with view_fmt($postfmt_name,$postfmt).
 
-=cut
+$postfmt_name will default to 'view_html'. If $postfmt isn't defined 
+some decent default is tried to be derived from the default fmt for
+$postfmt_name.
 
-sub rel_post_view {
-	my ($self, $p)=@_;
-	my $view=$self->data('view');
-	foreach ($p->tab->fld_names) {
-		$view =~ s/\$$_/$p->fld($_)->view_html/ge;			
-	}
-	$view;
-}
-
-=head2 $fld->view_text
-=head2 $fld->view_html
-
-Will view the related posts as defined by the view and join_str 
-parameters specified in the $data parameter to the constructor
+The $postfmt should contain a <Var Edit> tag that will be raplaced by
+the checkbox button.
 
 =cut
 
-sub view_text {shift->view_html(@_)}
-sub view_html {
-	my $self=shift;
-	my @views;
-	
-	foreach ($self->posts) {
-		push @views, $self->rel_post_view($_);
-	}
-	join ($self->join_str, @views);
-}
-
-
-
-=head2 $fld->edit_html
-
-Returns a string containing "<input type=checkbox ...>" constructs to
-allow the user to specify which posts we should be related to. All
-posts in the to table will be listed here.
-
-=cut
-
-sub edit_html {
-	my $self=shift;
+sub view_fmt_edit_html {
+	my ($self, $postfmt_name, $postfmt)=@_;
 	my $res="";
+	my $foot;
 
-	# FIXME: This is very db access inefficient as it lists to_tab in full
-	#        once for every post in it and once agian for every post in the
-  #        relation.
+	if (!defined $postfmt_name) {
+		$postfmt_name='view_html';
+	}
+	if (!defined $postfmt) { # Try to construc some nice default from fmt
+		$postfmt=$self->fmt($postfmt_name);
+		$postfmt =~ s/(.*?)<node[^\>]*(\"[^\"]*\")?[^\>]*>(.*?)<\/node>(.*)$/$3/i;
+		$res.=$1; $foot=$4;
+		if ($postfmt !~ /<Var\s+Edit>/i) {
+			$postfmt = "<Var Edit> $postfmt<br>";
+		}
+	}
+
+	my @ids;
+	foreach ($self->posts) {
+		push @ids, $_->id;
+	}
+
 	my $posts=$self->to_tab->list;
 	my $p;
+	my ($fmt,$edit);
 	while (defined ($p=$posts->get_next)) {
 		my $got_it="";
-		foreach ($self->posts) {
-			if ($p->id == $_->id) {
+		foreach (@ids) {
+			if ($p->id == $_) {
 				$got_it="checked";
 				last;
 			}
 		}
-		$res.="<input type=checkbox name=\"" . $self->name ."\" value=".
-			    $p->id . " $got_it> " . $self->rel_post_view($p) . "<br>";
+		$edit="<input type=checkbox name=\"" . $self->name ."\" value=".
+			    $p->id . " $got_it>";
+		$fmt=$postfmt; $fmt=~s/<Var\s+Edit>/$edit/i;
+		$res.=$p->view_fmt($postfmt_name, $fmt);
 	}
 	$res.="<input type=hidden name=\"" . $self->name ."\" value=do_edit>";
+	$res.=$foot;
 	$res;
 }
 
@@ -526,6 +524,54 @@ sub sql_create {
 	$self->lnk_tab->sql_create;
 	undef;
 }
+
+=head2 $fld->view_fmt($fmt_name, $fmt)
+
+Will call view_fmt($fmt_name, $fmt) on the postset containing all 
+the posts this relation is pointing to and return the result, se 
+DBIx::HTMLView::PostSet for info on the $fmt format.
+
+If the fmt string starts with "<InRel>", the rest of the fmt will
+be handled by this method instead of calling the PostSet version.
+Current the only supported construct here is <perl>...</perl> which
+will be replaced by the returnvalue of eval(...).
+
+=cut
+
+sub view_fmt {
+	my ($self, $fmt_name, $fmt)=@_;	
+	if (!defined $fmt) {$fmt=$self->fmt($fmt_name)}	
+
+	if ($fmt =~ /^<InRel>(.*)$/i) {
+		$fmt=$1;
+		my $p=DBIx::HTMLView::Fmt->new;
+		return $p->parse_fmt($self, $fmt_name, $fmt);
+	} else {
+		return $self->post_set->view_fmt($fmt_name, $fmt);
+	}
+}
+
+sub default_fmt {
+	my ($self, $kind)=@_;
+	if (!defined $kind) {
+		if ($self->got_data('view')) { # For backwards compatibility
+			my $v=$self->data('view');
+			foreach ($self->to_tab->fld_names) {
+				$v =~ s/\$$_/<fld $_>/g;
+			}
+			my $res= '<node join="'.$self->join_str.'">'. $v;
+			$res.="</node>";
+			$self->{'data'}{'fmt'}=$res; #FIXME: Use an accessor method
+			return $res;
+		}
+	}
+	if ($kind eq 'edit_html') {
+		return '<InRel><perl>$self->view_fmt_edit_html("view_html")</perl>';
+	}
+	
+	return DBIx::HTMLView::Relation::default_fmt(@_)
+}
+
 
 1;
 

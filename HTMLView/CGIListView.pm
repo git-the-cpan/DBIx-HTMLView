@@ -149,24 +149,26 @@ $res .= << "EOF";
   <input type=submit value="Search">
 EOF
 
-$res .= $self->form_data . "</from><hr>";
+  $res .= $self->form_data . "</from><hr>";
 	
 	my $hits;
   my $lst=undef;
   my $act=$q->param('_Action');
 	if (defined $act && $act eq 'search') {
-    $lst=$q->param('_Command');
-	} 
+		$lst=$q->param('_Command');
+	}  
 	$hits=$self->db->tab($tab)->list($lst,$self->{'extra_sql'},
-                                   $self->{'view_flds'});
+																	 $self->{'view_flds'});
+
 	$res .= $hits->view_html(
-    '<a href="'.$script.'?_id=$id&_Action=show&'.$self->lnk.'">Show</a> '.
-    '<a href="'.$script.'?_id=$id&_Action=edit&'.$self->lnk.'">Edit</a> '.
-    '<a href="'.$script.'?_id=$id&_Action=delete&'.$self->lnk.'">Delete</a> ',
+    '<a href="'.$script.'?_id=<fld id>&_Action=show&'.$self->lnk.'">Show</a> '.
+    '<a href="'.$script.'?_id=<fld id>&_Action=edit&'.$self->lnk.'">Edit</a> '.
+    '<a href="'.$script.'?_id=<fld id>&_Action=delete&'.$self->lnk.'">Delete</a> ',
     $self->{'view_flds'}
   );
-  $res .= '<a href="'.$script.'?_Action=add&'.$self->lnk.'">Add</a> ';
-  $res;
+
+	$res .= '<a href="'.$script.'?_Action=add&'.$self->lnk.'">Add</a> ';
+	$res;
 }
 
 1;

@@ -129,7 +129,22 @@ query passed to the constructor.
 
 sub sql_select {
 	my $self=shift;
-	"select distinct " . join(', ', keys %{$self->{'flds'}}) . " from " . 
+	my $tab=$self->tab->name;
+	my $flds="";
+
+	# Place the fields from this tbale first so that the post objects
+	# created later wont get fields from the related tabels in case those
+  # tabels have fields with the same name
+	foreach (keys %{$self->{'flds'}}) {
+		if (/^$tab\./) {
+			$flds = $_ . ", " . $flds;
+		} else {
+			$flds .= $_ . ", ";
+		}
+	}
+	$flds =~ s/, $//;
+
+	return "select distinct $flds from " . 
            		join(', ', keys %{$self->{'tabs'}}) . " where " . 
 							$self->{'where'};
 }

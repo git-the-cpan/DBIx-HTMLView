@@ -44,6 +44,7 @@ and to reflect those modifications in the database.
 package DBIx::HTMLView::Post;
 use strict;
 use Carp;
+require DBIx::HTMLView::Fmt;
 
 =head2 $post=DBIx::HTMLView::Post->new($tab, $data, $sth)
 
@@ -55,7 +56,9 @@ which can be done in several ways:
    those arguments.
 2. If $data is an array reference, $sth is supposed to be the object 
    returned by a DBI execude call with a select command, and $data should 
-   be the array ref with the data you want to create a post object of.
+   be the array ref with the data you want to create a post object of. If
+   the same fieldname apperas twice in the select the first one is 
+   presumed to be the one belonging to this post.
 3. If $data is a hash reference, it is supposed to contain Fld/Value 
    pairs.
 4. If $datat is CGI object the CGI params is supposed to be Fld/Value 
@@ -79,9 +82,11 @@ sub new {
 		if (ref $data eq "ARRAY") {
 			my $cnt=0;
 			foreach (@{$sth->{'NAME'}}) {
-				my $a=$self->tab->new_fld($_,$data->[$cnt]);
-				$self->set($_, $a);			
-				$cnt++;
+				if (! $self->got_fld($_)) { # As we only want the first one
+					my $a=$self->tab->new_fld($_,$data->[$cnt]);
+					$self->set($_, $a);			
+					$cnt++;
+				}
 			}
 		} elsif (ref $data eq "HASH") {
 			foreach (keys %$data) {
@@ -153,13 +158,7 @@ Returns a string that could be used to view this post in text format
 
 sub view_text {
 	my $self=shift;
-	my $res="";
-
-	foreach ($self->tab->fld_names) {
-		my $val=$self->fld($_);
-		$res.="$_: " . $val->view_text . "\n";;
-	}
-	$res;
+	$self->view_fmt("view_text");
 }
 
 =head2 $post->view_html
@@ -171,14 +170,39 @@ Returns a string that could be used to view this post in html format.
 
 sub view_html {
 	my $self=shift;
-	my $res="<table>";
+	$self->view_fmt("view_html");
+}
 
-	foreach my $fld ($self->tab->fld_names) {
-		my $val=$self->fld($fld);
-		$res.="<tr><td valign=top><b>$fld</b></td><td>". $val->view_html . "</td></tr>\n";;
-	}
-	$res.="</table>";
-	$res;
+=head2 $post->view_fmt($fmt_name, $fmt)
+
+Returns a string represeting this post in the format named by $fmt_name
+as returned by DBIx::HTMLView::post_fmt($fmt_name). If $fmt is specified
+it will be used as the fmt strings instead of looking up a default one.
+
+All <Var ...> will be replaced with there corisponding values or removed
+if they are not know, currently no such values are know here (eg all is
+remeved).
+
+To include the value of an Fld in output simply put $<fld_name>
+in the desired place in the $fmt string. (eg $name will be replaced
+with the outpit of $self->fld('name')->view_fmt($fmt_name)).
+
+If $fmt is not specified the default post fmt will be used as returned
+by post_fmt in DBIx::HTMLView::Table.
+
+$fmt_name is passed on to fld objects, so it can be used to specify 
+how the flds should be represented even if you use a custom fmt passed
+to $fmt.
+
+=cut
+
+sub view_fmt {
+  my ($self, $fmt_name,  $fmt)=@_;
+
+  if (!defined $fmt) {$fmt=$self->tab->post_fmt($fmt_name)}
+
+	my $p=DBIx::HTMLView::Fmt->new;
+	return $p->parse_fmt($self, $fmt_name, $fmt);
 }
 
 =head2 $post->fld_names
@@ -270,4 +294,11 @@ sub update {
 		$self->tab->insert($self);
 	}
 }
+
+sub var {
+	my ($self, $var)=@_;
+	return "";
+}
+
 1;
+

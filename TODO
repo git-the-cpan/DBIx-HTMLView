@@ -1,17 +1,13 @@
 Use order from definition in editors/viewers
-Extendet Tests and description on how to set up the test db.
-Public test Db server (not athena)
 Docs
 Formated editor/viewer with ->edit_html or ->view_html tied to %db
-Decide when to use confess/croak/die/...
 Autodetect order flds
 FIXME's
-N2One relations
 Time optimisations
 Security checks on read only fields
 Separate public and private methods in the docs
 Separate overriden methods describing only changes
-Make sure data don't get mixed between tables on multitable select
+Make sure posts wont get extra fields from other tables defined on related selects
 Save related data from multitable select to preven futher db calls
 Make $data in all Fld constructors case insensitive
 Add required require statements to the synopsis
@@ -25,3 +21,14 @@ Move the QuickStart doc from the old distribution
 Move default/formated editors to edit_html in Post, PostSet, update README file
 Extende the Formated.cgi docs
 Combine all data getting subs in the Flds to one common
+Currently all Id fields are presumed to be Int types both in N2N and N2One
+N2N uses $self->tab->db and defined sub db instead of using Fld::db
+Add a proc to the DB class specifying the NULL string
+Test the view_fld stuff
+Have PostSet::posts return an tied array linked to the get_first and get_next methods.
+Make it possible to chnage default named fmts of Post and PostSet (in Table), update README.fmt
+Support several <node>...</node> constructs in the PostSet fmts, update docs, update README.fmt
+Move all default fmt constructors to separat modules (eg html.pm, text.pm, ...)
+Insert fmt used to view fields that's not set, one for every other fmt
+Add some fmt format with variables for editor buttons (eg add, edit, table)
+Document the var methods (called from the Fmt parser)

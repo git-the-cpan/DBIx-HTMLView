@@ -67,6 +67,7 @@ objects:
   Text
   Id
   N2N
+  N2One
   
 For backwards compatibility there is also a DB method calling msqlDB.
 
@@ -78,7 +79,7 @@ package DBIx::HTMLView;
 use strict;
 use vars qw(@ISA $VERSION @EXPORT);
 
-$VERSION="0.5";
+$VERSION="0.6.1";
 
 require Exporter;
 require DBIx::HTMLView::DB;
@@ -91,9 +92,10 @@ require DBIx::HTMLView::Bool;
 require DBIx::HTMLView::Text;
 require DBIx::HTMLView::Id;
 require DBIx::HTMLView::N2N;
+require DBIx::HTMLView::N2One;
 
 @ISA         = qw(Exporter);
-@EXPORT      = qw(DB mysqlDB msqlDB Table Str Bool Text Id N2N Int);
+@EXPORT      = qw(DB mysqlDB msqlDB Table Str Bool Text Id N2N Int N2One);
 
 sub DB {
   msqlDB(@_) # For backwards compatibility
@@ -133,6 +135,10 @@ sub Id {
 
 sub N2N {
 	DBIx::HTMLView::N2N->new(@_);
+}
+
+sub N2One {
+	DBIx::HTMLView::N2One->new(@_);
 }
 
 1;

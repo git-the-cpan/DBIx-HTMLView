@@ -41,4 +41,6 @@ use vars qw(@ISA);
 require DBIx::HTMLView::Fld;
 @ISA = qw(DBIx::HTMLView::Fld);
 
+sub default_fmt {return DBIx::HTMLView::Fld::default_fmt(@_)}
+
 1;

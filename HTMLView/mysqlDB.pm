@@ -35,6 +35,7 @@ are inherited from the superclass: DBIx::HTMLView::DB -- only
 those that are specific to mysql are overridden.
 
 =head1 METHODS
+
 =cut
 
 package DBIx::HTMLView::mysqlDB;
@@ -59,8 +60,10 @@ sub insert {
 			$values .= $_->{'val'}.", ";
 		}
 	}
-	$names =~ s/, $//;
-	$values =~ s/, $//;
+
+	# Add id as it might be the only field
+	$names .= $post->tab->id->name;
+	$values .= "NULL";
 
 	my $sth=$self->send($cmd . " ($names) VALUES ($values)");
 	$post->set($tab->id->name, $sth->{'insertid'}); 

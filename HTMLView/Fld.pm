@@ -60,6 +60,16 @@ sql_size - The size to be used to store this in the database, eg the
 sql_type - Allows you to overide the database specific default type to 
   use for a fld. If this is defined it will be used as sql type for 
   this fld.
+fmt - A string specifying how this Fld should be viewed by default. It
+  is the fmt string that will be used by view_fmt if no other are 
+  specified, or if the one specified does not excist. The format of 
+  this string depends on the type of Fld se the docs to the view_fmt 
+  methods of the diffrent Fld subclasses for info on it.
+fmt_* - You can give each Fld any number of custom fmts used to view
+  this fld in diffrent contexts. There are a few special one: 
+  fmt_view_html, fmt_edit_html, fmt_view_text that are tied to the 
+  method calls view_html, edit_html, view_text respectivly (eg the
+  method call view_html is the same as view_fmt('view_html'))
 
 The second version of the constructor is used by the
 DBIx::HTMLView::Table class when it creates copies of its flds, gives
@@ -200,6 +210,15 @@ sub post {
 Those methods are not defined in this class, but are suposed to be
 defined in all fld subclasses.
 
+=head2 $fld->view_fmt($fmt_name,$fmt)
+
+Returns a string used to display the contents (value) of the
+fld. Usually this is just the value of the fld, but for more complex
+Fld, like relations, $fmt_name can be used to specify which fmt that
+should be used (the diffrent fmts are defined in the constructor, se the 
+$fld->new method). If the $fmt param is defined it will be used
+as the fmt string insteda of looking up a default one.
+
 =head2 $fld->view_html
 
 Returns a html string used to display the contents (value) of the fld.
@@ -254,7 +273,70 @@ return the sql type (if any) of this field to be included in the
 CREATE clause for the main table. That is normal fields will only
 return their type while relations will create it's link table.
 
-=cut
+=head2 $fld->fmt($kind)
+
+Returns the "fmt_$kind" param as passed to the constructor (se new
+method for info). If that one does not excist the default one "fmt" is
+used. If thatone isn't specified either the default fmt '$val' is
+returned.
+
+To allow subclasses to provide more decent defaults the
+default_fmt($kind) method is called if "fmt_$kind" is not defined.
+If it returns undef this method carries on as described above, 
+otherwise the return value of default_fmt is returned. Then default_fmt
+is called again if there was no "fmt" param speciefied, but this 
+time with $kind undefined.
+
+The default implementation here is ofcourse to always return undef, that 
+will give the behaviour described in the first paragraph here.
+
+A replacment default_fmt should never return undef but instead execute
+it's supreclass version of it and return it's value if it dosn't want to
+override the specified kind.
 
 =cut
+
+sub fmt {
+	my ($self,$kind)=@_;
+
+	if ($self->got_data("fmt_$kind")) {return $self->data("fmt_$kind");}
+	
+	my $d=$self->default_fmt($kind);
+	if (defined $d) {return $d}
+	
+	if ($self->got_data("fmt")) {return $self->data("fmt");}
+
+	$d=$self->default_fmt(undef);
+	if (defined $d) {return $d}
+
+	return '<var val>';
+}
+
+=head2 $fld->default_fmt($kind)
+
+Used to allow subclasses to provide there own default fmts, se 
+$fld->fmt($kind).
+
+=cut
+
+sub default_fmt {return undef;}
+
+=head2 $fld->view_text
+=head2 $fld->view_html
+=head2 $fld->edit_text
+
+For backwards compatibility those are linked to view_fmt('view_text'),
+view_fmt('view_html'), view_fmt('edit:html'), respectivly.
+
+A replacment default_fmt should never return undef but instead execute
+it's supreclass version of it and return it's value if it dosn't want to
+override the specified kind.
+
+=cut
+
+sub view_text {shift->view_fmt('view_text');}
+sub view_html {shift->view_fmt('view_html');}
+sub edit_html {shift->view_fmt('edit_html');}
+
+
 

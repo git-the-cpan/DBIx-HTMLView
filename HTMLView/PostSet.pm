@@ -87,8 +87,12 @@ sub new {
 # FIXME: Separate into a into_save_mode method and update Table::list docs.
 			while (my $ref = $sth->fetchrow_arrayref) {
 				my $post=$tab->new_post($ref,$sth);
-				if (!$self->got_post($post)) {
-					$self->do_got_post($post);
+				if ($post->got_id) {
+					if (!$self->got_post($post)) {
+						$self->do_got_post($post);
+						$self->add($post);
+					}
+				} else {
 					$self->add($post);
 				}
 			}
@@ -155,11 +159,15 @@ sub get_next {
 		my $ref;
 		if ($ref= $self->{'sth'}->fetchrow_arrayref) {
 			my $post=$self->tab->new_post($ref,$self->{'sth'});
-			if (!$self->got_post($post)) {
-				$self->do_got_post($post);
-				return $post;
+			if ($post->got_id) {
+				if (!$self->got_post($post)) {
+					$self->do_got_post($post);
+					return $post;
+				} else {
+					return $self->get_next;
+				}
 			} else {
-				return $self->get_next;
+				return $post;
 			}
 		} else {
 			return undef;
@@ -230,70 +238,68 @@ html format.
 
 =cut
 
+#FIXME: We here shourtcust the calls to tab->list_fmt in order to pass params to it, noot good...
+
 sub view_html {
 	my ($self,$butt,$flds)=@_;
-	my $res="<table border=1>";
-	my @fld;
-	my $t=2;
-	my $p;
-
-	if (!defined $flds) {
-		$t=eval {
-			$p=$self->first;
-			@fld=$p->tab->fld_names;
-		}; die unless ($t || $@ =~ /^No posts!/);
-	} else {
-		$p=$self->first;
-		@fld=@$flds;
-	}
-	
-	if ($t) {
-		$res.="<tr>";
-		foreach (@fld) {
-			$res.="<th>" . $_ . "</th>";
-		}
-		$res.="</tr>";
-		
-		do {
-			$res.="<tr>";
-			#use Data::Dumper; print "<b>P</b>: " . Dumper($p) . "<P>";
-			foreach my $f (@fld) {
-				#print "f: $f<br>\n";
-				my $fld=$p->val($f);
-				$res.="<td>" . $fld->view_html() . "</td>"
-			}
-			if (defined $butt) {
-				my $t=$butt;
-				$t=~s/\$id/$p->id/ge;
-				$res.="<td>$t</td>";
-			}
-			$res.="</tr>";
-			$p=$self->get_next;
-		} until (!defined $p);
-		$res.="</table>";
-	} else {
-		$res.= "<p><i>Empty</i></p>";
-	}
-
-	$res;
+	$self->view_fmt("view_html", $self->tab->list_fmt("view_html",$butt,$flds));
 }
 
-=head2 $post_set->view_text
+=head2 $post->view_fmt($fmt_name, $fmt)
 
-Returns a string that can be used to view the entire set of posts in 
-text format.
+Returns a string represeting this set of posts in the format named by
+$fmt_name. as returned by DBIx::HTMLView::list_fmt($fmt_name). If $fmt 
+is specified it will be used as the fmt strings instead of looking up 
+a default one.
+
+If the fmt stringit contains a <node>...</node> contrsuct the ... part
+will be repeated once for every post and passed as $fmt param to 
+view_fmt of DBIx::HTMLView::Post. Curretly we only support one
+<node>...</node>  construct in the fmt. If ... is "", undef will
+be passed as fmt to the Post, thereby using default Post fmts.
+
+$fmt_name is passed on to the Post objects who the passes it on to the
+fld objects, so it can be used to specify how the flds should be
+represented  even if you use a custom fmt passed to $fmt.
 
 =cut
 
-sub view_text {
-	my $self=shift;
-	my $res="";
+sub view_fmt {
+	my ($self, $fmt_name, $fmt)=@_;
+	my ($head, $node, $foot);
+	my $join=undef;
+	my $res;
+	my $p;
 
-	while (defined ($_=$self->get_next)) {
-		$res.=$_->view_text . "\n";
+	if (!defined $fmt) {$fmt=$self->tab->list_fmt($fmt_name)}
+
+	#FIXME: Use a real XML parser or some template package
+	while ($fmt =~ s/^(.*?)<sperl>(.*?)<\/sperl>/$1.eval($2)/geis) {}
+	if ($fmt =~ /^(.*?)<node\s*(.*?)>(.*)<\/node>(.*)$/s) {
+		$head=$1; $node=$3; $foot=$4;
+		if ($2 =~ /^join\s*=\s*[\"\']?(.*?)[\"\']?$/s) {$join=$1}
+		if ($node eq "") {$node=undef;}
+	} else {
+		return $fmt;
 	}
+	$res=$head;
+	my $t=eval {
+		$p=$self->first;
+	}; die unless ($t || $@ =~ /^(No posts!)/);
+	if ($t) {
+		$res.=$p->view_fmt($fmt_name, $node);
+		while (defined ($p=$self->get_next)) {
+			if (defined $join) {$res.=$join}
+#			print "hej\n";
+			$res.=$p->view_fmt($fmt_name, $node);
+		}
+	}
+	$res.=$foot;
+
 	$res;
 }
+
+sub view_text {shift->view_fmt('view_text')}
 
 1;
 

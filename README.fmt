@@ -1,0 +1,106 @@
+
+General
+-------
+
+The fmt language used to specify how the data in the database should
+be presented. It works in a template like way with a html like format,
+and it can be specified on a PostSet, Post or Fld level (See the
+DBIx::HTMLView::PostSet DBIx::HTMLView::Post or DBIx::HTMLView::Fld
+respectivly).
+
+It works by replacing the fld tags with data from the database. All it 
+knows of is it's own tags, which means that they can be placed inside
+other tags in a HTML file and still be replaced with the correct
+value. If you for example have the string:
+
+  <a href="Formated2.cgi?id=<fld id>"><fld name></a>
+
+then <fld id> and <fld name> will be replaced with their corresponding 
+values. The tags currently recogniced is:
+
+  <var name>           - Inserts the special variable name
+  <fld name>           - Inserts the fld name view with the default fmt
+	<fmt name>...</fmt>  - Inserts the fld name view with the fmt string ...
+  <node>...</node>     - Repeats ... for every post viewed
+	<perl>...</perl>     - Evals the string ... and inserts it returnvalue
+
+The <perl> tags can be place anywhere while the use of the others
+depend on what the fmt string is suposed to represent (eg Fld, Post or
+PostSet).
+
+For a simple example se the Test2.fmt file which will work together
+with the Test2 table from the set of test tabels used by test.pl. To
+view the content of the entire table, try:
+
+  Formated2.cgi?tab=Test2&fmt=Test2
+
+Fld level fmt-format
+-----------------------
+
+The Fld level fmt strings are used to view a single Fld. They are
+quite simple. To present a normal field your have only two special
+variabels that can be used: 
+
+  <var val>    - Inserts the value of the field
+  <var name>   - Inserts the name of the field
+
+Relations will simply pass on there fmt string to the related posts
+they represents. That means that an N2N relations wants a PostSet
+level fmt string while a N2One relation wants a Post level fmt string
+(se below).
+
+All fld types can override the behaviour of the view_fmt and
+default_fmt methods (se the DBIx::HTMLView::Fld manpage), which allows
+them to specify the fmt formt used by them. Se there man pages for
+detailed info.
+
+
+Post level fmt-format
+------------------------
+
+The Post level fmt strings are used to view one single post. To insert 
+the values of the fld's of that post you use the "<fld name>" or 
+"<fmt name>...</fmt>" tags. The later allows you to specify the fmt
+string used to view that Fld, which is very usefull when handling
+relations. The first one simply inserts the fld using it's
+default fmt, usualy it's value (se Named fmt's below).
+
+
+PostSet level fmt-format
+---------------------------
+
+The PostSet level fmt strings are used to view several posts as
+returned by the list method of DBIx::HTMLView::Table for exampel. It
+should contain a "<node>...</node>" construct. The ... part will be
+pased as a fmt to the Posts, then all the resulting post presentations 
+will be concated after eachother (currently it only supports one
+"<node>...</node>" construct in the fmt string).
+
+The starting tag can contain a join parameter (ie "<node join=', '>"), 
+which will be placed between the posts presentations. For example:
+
+  <node join=", "><fld Name></node>
+
+will produce a comma separated list of posts, with the posts
+represented by the field Name.
+
+
+Named fmt's
+-----------
+
+In the Table definition it is possible to define named fmt strings
+(currently only possibly at the Fld level, but should be possible at
+all levels in the future). When you then eval an fmt string into an
+presentatin string (with the view_fmt method) you always specify which
+default fmt string should be used by <fld ...>.
+
+To simplify your creation of fmt strings there is a few default named
+fmt strings that will always be defined for all flds:
+
+view_html - The PostSet, Post and Fld formated nicely using html tabels
+edit_html - The Fld's presented with html <input type=...> tags to be
+            used in a html form for editing the Post using the
+            View.cgi script (curently not working on the PostSet
+            level). 
+view_text - The PostSet, Post and Fld in a plantext format.
+
