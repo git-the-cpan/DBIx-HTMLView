@@ -69,36 +69,36 @@ sub edit_size  {
 
 
 sub val {
-	my $self=shift;
+  my $self=shift;
 
-	confess "Field contains no data" if (!defined $self->{'val'});
-	$self->{'val'};
+  confess "Field contains no data" if (!defined $self->{'val'});
+  $self->{'val'};
 }
 
 =head2 $fld->got_val
 
-Return true if the value of this field is set (defiend).
+Return true if the value of this field is set (defined).
 
 =cut
 
 sub got_val {
-	(defined shift->{'val'});
+  (defined shift->{'val'});
 }
 
 sub default_fmt {
-	my ($self, $kind)=@_;
-	if ($kind eq 'edit_html') {
-		return 	'<input name="<var name>" value="<perl>js_escape($self->var("val"))</perl>" size='.	
-			$self->edit_size . '>';
-	}
-	return DBIx::HTMLView::Fld::default_fmt(@_);
+  my ($self, $kind)=@_;
+  if ($kind eq 'edit_html') {
+    return   '<input name="<var name>" value="<perl>js_escape($self->var("val"))</perl>" size='.  
+      $self->edit_size . '>';
+  }
+  return DBIx::HTMLView::Fld::default_fmt(@_);
 }
 
 sub sql_data {
-	my ($self, $sel)=@_;
-	my $fld=$self->tab->name . "." . $self->name;
-	$sel->add_fld($fld);
-	$fld;
+  my ($self, $sel)=@_;
+  my $fld=$self->tab->name . "." . $self->name;
+  $sel->add_fld($fld);
+  $fld;
 }
 
 sub del {}
@@ -119,26 +119,32 @@ $name - The name of this field
 =cut
 
 sub view_fmt {
-	my ($self, $fmt_name, $fmt)=@_;
-	my $val;
+  my ($self, $fmt_name, $fmt)=@_;
+  my $val;
 
-	if (!defined $fmt) {$fmt=$self->fmt($fmt_name);}
+  if (!defined $fmt) {$fmt=$self->fmt($fmt_name);}
 
-	my $p=DBIx::HTMLView::Fmt->new;
-	return $p->parse_fmt($self, $fmt_name, $fmt);
+  my $p=DBIx::HTMLView::Fmt->new;
+  return $p->parse_fmt($self, $fmt_name, $fmt);
 }
 
 sub var {
-	my ($self, $var) =@_;
-	if (lc($var) eq 'val') {
-		return $self->val if ($self->got_val);
-		return "";
-	}
-	if (lc($var) eq 'name') {
-		return $self->name;
-	}
-	return "";
+  my ($self, $var) =@_;
+  if (lc($var) eq 'val') {
+    return $self->val if ($self->got_val);
+    return "";
+  }
+  if (lc($var) eq 'name') {
+    return $self->name;
+  }
+  return "";
 }
 
 1;
 
+
+# Local Variables:
+# mode:              perl
+# tab-width:         8
+# perl-indent-level: 2
+# End:

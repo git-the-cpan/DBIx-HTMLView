@@ -1,3 +1,45 @@
+0.7
+ * Added a Date field fld.
+ * Added patch from "Eric E. Coe" <ecoe@reportweb.com> that makes 
+   CGIListView work even when your id column is not named id.
+ * Added a new typed called Tree for easy creation of tree structure 
+   datatypes.
+ * Anders Westrup <anders@barbanet.com> added a Table::count method 
+   to count the number of hits.
+ * From a patch by Konrad Riedel <k.riedel@gmx.de> the folowing features 
+   was derived:
+     + input_type param added to N2One that specifying what kind of
+       html objects should be used for editing it. Possible values are
+       "radio" (default) and "select".
+     + Split up the result shown in a CGIListView i multiple pages
+     + Click on a columname to sort the CGIListView by the column
+     + CGIGermanListView a translated version of CGIListView with a new 
+       layout.
+     (The editable id's are not included by default as they break a few
+      things, see editable_id.README.)
+ * Quite som spelling and gramma correction from above patches and from 
+   Bryon Bean <bbean@timebridge.com>.
+ * Reformated all code to use 8 space tabs and 2 space indention as 
+   sugested by "Eric E. Coe" <ecoe@reportweb.com>.
+ * Anders Westrup <anders@barbanet.com> added a _done param to View.cgi
+   that makes it send a Location: redirect to that url after preforming
+   the update or delete action instread of bringing up an editor. There 
+   is also a _done2 param forcing CGIQueryEdit to set the _done param to
+   this value (eg makes the browser jump to this address after the 
+   edit/add is done).
+
+0.6.1
+ * Fixed bug preventing adding, and updating posts with no other fields
+   than the id field.
+ * Fixed bug that got fields from diffrent tabels with the same name 
+   mixed up when selecting related data. There still might be a
+   problem when not selecting all fields of a post, then the not
+   selected fields may show up as the fields with the same name from 
+   the other tabels that where selected.
+ * Rewrote Test2.fmt to work with the new Formated2.cgi
+ * Fixed bug in Formated2.cgi preventing the FLD param from working
+ * Added Table::noid_list method
+
 0.6
  * Added N2One relations
  * An Int value set to "" will now be set to NULL in the db

@@ -83,27 +83,27 @@ reference to an array of the id's of the posts being related to.
 =cut
 
 sub new {
-	my $this = shift;
-	my $class = ref($this) || $this;
-	my $self=	bless {}, $class;
+  my $this = shift;
+  my $class = ref($this) || $this;
+  my $self=  bless {}, $class;
 
-	my ($name, $val, $tab)=@_;
+  my ($name, $val, $tab)=@_;
 
-	#print "Name: $name ";
-	#use Data::Dumper; print Dumper($val) . "<br>";
+  #print "Name: $name ";
+  #use Data::Dumper; print Dumper($val) . "<br>";
 
-	if (ref $val eq "HASH") {
-		$self->{'data'}=$val;
-	} else {
-		if (ref $val eq "ARRAY") {$val=$val->[0];}
-		if (ref $this) {$self->{'data'}=$this->{'data'};}
-		$self->{'val'}=$val;
-	}
+  if (ref $val eq "HASH") {
+    $self->{'data'}=$val;
+  } else {
+    if (ref $val eq "ARRAY") {$val=$val->[0];}
+    if (ref $this) {$self->{'data'}=$this->{'data'};}
+    $self->{'val'}=$val;
+  }
 
-	$self->{'name'}=$name;
-	$self->{'tab'}=$tab;
+  $self->{'name'}=$name;
+  $self->{'tab'}=$tab;
 
-	$self;
+  $self;
 }
 
 =head2 $fld->name
@@ -113,7 +113,7 @@ Returns the name of the fld.
 =cut
 
 sub name {
-	shift->{'name'};
+  shift->{'name'};
 }
 
 
@@ -125,9 +125,9 @@ method. It dies if the data was not set.
 =cut
 
 sub data {
-	my ($self,$key)=@_;
-	confess ("$key not defined!") if (!defined $self->{'data'}{$key});
-	$self->{'data'}{$key}
+  my ($self,$key)=@_;
+  confess ("$key not defined!") if (!defined $self->{'data'}{$key});
+  $self->{'data'}{$key}
 }
 
 =head2 $fld->got_data($key)
@@ -138,8 +138,8 @@ new method.
 =cut
 
 sub got_data {
-	my ($self, $key)=@_;
-	(defined $self->{'data'}{$key});
+  my ($self, $key)=@_;
+  (defined $self->{'data'}{$key});
 }
 
 =head2 $fld->set_tab($tab)
@@ -151,8 +151,8 @@ to. All fld belongs to either a Table or a Post.
 
 
 sub set_table {
-	my ($self, $tab)=@_;
-	$self->{'tab'}=$tab;
+  my ($self, $tab)=@_;
+  $self->{'tab'}=$tab;
 }
 
 =head2 $fld->set_post($post)
@@ -163,8 +163,8 @@ to. All fld belongs to either a Table or a Post.
 =cut
 
 sub set_post {
-	my ($self, $post)=@_;
-	$self->{'post'}=$post;
+  my ($self, $post)=@_;
+  $self->{'post'}=$post;
 }
 
 =head2 $fld->tab
@@ -174,9 +174,9 @@ Return the DBIx::HTMLView::Table object this fld belongs to.
 =cut
 
 sub tab {
-	my $self=shift;
-	confess "Table not defined!" if (!defined $self->{'tab'});
-	$self->{'tab'};
+  my $self=shift;
+  confess "Table not defined!" if (!defined $self->{'tab'});
+  $self->{'tab'};
 }
 
 =head2 $fld->db
@@ -186,9 +186,9 @@ Return the DBIx::HTMLView::Db object this fld belongs to.
 =cut
 
 sub db {
-	my $self=shift;
-	confess "Table not defined!" if (!defined $self->{'tab'});
-	$self->tab->db;
+  my $self=shift;
+  confess "Table not defined!" if (!defined $self->{'tab'});
+  $self->tab->db;
 }
 
 =head2 $fld->post
@@ -198,9 +198,9 @@ Returns the DBIx::HTMLView::Post object this fld belongs to.
 =cut
 
 sub post {
-	my $self=shift;
-	confess "Post not defined!" if (!defined $self->{'post'});
-	$self->{'post'};
+  my $self=shift;
+  confess "Post not defined!" if (!defined $self->{'post'});
+  $self->{'post'};
 }
 
 1;
@@ -297,19 +297,19 @@ override the specified kind.
 =cut
 
 sub fmt {
-	my ($self,$kind)=@_;
+  my ($self,$kind)=@_;
 
-	if ($self->got_data("fmt_$kind")) {return $self->data("fmt_$kind");}
-	
-	my $d=$self->default_fmt($kind);
-	if (defined $d) {return $d}
-	
-	if ($self->got_data("fmt")) {return $self->data("fmt");}
+  if ($self->got_data("fmt_$kind")) {return $self->data("fmt_$kind");}
+  
+  my $d=$self->default_fmt($kind);
+  if (defined $d) {return $d}
+  
+  if ($self->got_data("fmt")) {return $self->data("fmt");}
 
-	$d=$self->default_fmt(undef);
-	if (defined $d) {return $d}
+  $d=$self->default_fmt(undef);
+  if (defined $d) {return $d}
 
-	return '<var val>';
+  return '<var val>';
 }
 
 =head2 $fld->default_fmt($kind)
@@ -340,3 +340,9 @@ sub edit_html {shift->view_fmt('edit_html');}
 
 
 
+
+# Local Variables:
+# mode:              perl
+# tab-width:         8
+# perl-indent-level: 2
+# End:

@@ -1,17 +1,13 @@
 Use order from definition in editors/viewers
-Extendet Tests and description on how to set up the test db.
-Public test Db server (not athena)
 Docs
 Formated editor/viewer with ->edit_html or ->view_html tied to %db
-Decide when to use confess/croak/die/...
 Autodetect order flds
 FIXME's
-N2One relations
 Time optimisations
 Security checks on read only fields
 Separate public and private methods in the docs
 Separate overriden methods describing only changes
-Make sure data don't get mixed between tables on multitable select
+Make sure posts wont get extra fields from other tables defined on related selects
 Save related data from multitable select to preven futher db calls
 Make $data in all Fld constructors case insensitive
 Add required require statements to the synopsis
@@ -36,3 +32,9 @@ Move all default fmt constructors to separat modules (eg html.pm, text.pm, ...)
 Insert fmt used to view fields that's not set, one for every other fmt
 Add some fmt format with variables for editor buttons (eg add, edit, table)
 Document the var methods (called from the Fmt parser)
+Fix bug preventing your from view the id field when specifying which fileds to View in CGIListView
+Allow N2One/N2N relations with no related post.
+Make Tree a N2One subclass
+Use sql commands to skip hist instaed of getting them in PostSet::view_fmt
+Make order an page prservation table dependent.
+

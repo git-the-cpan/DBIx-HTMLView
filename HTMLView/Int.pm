@@ -44,10 +44,16 @@ require DBIx::HTMLView::Field;
 @ISA = qw(DBIx::HTMLView::Field);
 
 sub name_vals {
-	my $self=shift;
-	my $val=$self->val;
-	if ($val eq "") {$val="NULL"}
-	({name=>$self->name, val=> $val });
+  my $self=shift;
+  my $val=$self->val;
+  if ($val eq "") {$val="NULL"}
+  ({name=>$self->name, val=> $val });
 }
 
 sub sql_create {my $self=shift;$self->db->sql_type("Int",$self)}
+
+# Local Variables:
+# mode:              perl
+# tab-width:         8
+# perl-indent-level: 2
+# End:

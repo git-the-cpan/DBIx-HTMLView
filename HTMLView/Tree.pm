@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-#  N2One.pm - A many to one relation between two tabels
+#  Tree.pm
 #  (c) Copyright 1999 Hakan Ardo <hakan@debian.org>
 #
 #  This program is free software; you can redistribute it and/or modify
@@ -19,30 +19,15 @@
 
 =head1 NAME
 
-  DBIx::HTMLView::N2One - A many to one relation between two tabels
+  DBIx::HTMLView::Tree
 
 =head1 SYNOPSIS
 
-  $fld=$post->fld('testf');
-  print $fld->view_html;
-
 =head1 DESCRIPTION
-
-This is a subcalss of DBIx::HTMLView::Int used to represent a relation
-to a post in another (or possibly the same) table. The relation will
-be represented in the database by a field containing the id of the
-post related to. Se the DBIx::HTMLView::Field and DBIx::HTMLView:.Fld
-(the superclass of Field) manpage for info on the methods of this
-class.
-
-NOTE: Even if this is a relation it is NOT a subclass of
-DBIx::HTMLView::Relation. 
-
-#FIXME: List possible params
 
 =cut
 
-package DBIx::HTMLView::N2One;
+package DBIx::HTMLView::Tree;
 use strict;
 use Carp;
 
@@ -62,6 +47,8 @@ sub to_tab_name {
   shift->data('tab')
 }
 
+sub super_name {shift->data('super_name')}
+
 =head2 $fld->to_tab
 
 Returns the DBIx::HTMLView::Table object representing the to table.
@@ -78,23 +65,20 @@ sub post {
   $self->to_tab->get($self->val);
 }
 
-sub input_type {
-        my $self=shift;
-        return $self->got_data('input_type')?$self->data('input_type'):'radio';
-}
-
 =head2 $fld->view_fmt_edit_html($postfmt_name, $postfmt)
 
-Used by the default edit_html fmt. It will return a string 
+Used by the default edit_html fmt. It will returns a string 
 containing "<input type=radio ...>" constructs to allow the user to 
-specify which post we should be related to. All posts in the to table
-will be listed here and viewed with view_fmt($postfmt_name,$postfmt).
+specify which post (chunk in the tree) we should be related to. All 
+posts in the to table (tree) will be listed here in a hierarchically
+list showing the tree structure and viewed with 
+view_fmt($postfmt_name,$postfmt).
 
 $postfmt_name will default to 'view_html'. If $postfmt isn't defined 
-some decent default is tried to be derived from the default fmt for
-$postfmt_name.
+some decent default is tried to be derived from the 'view' fmt or if
+that's not defined, the default fmt.
 
-The $postfmt should contain a <Var Edit> tag that will be replaced by
+The $postfmt should contain a <Var Edit> tag that will be raplaced by
 the radio button.
 
 =cut
@@ -105,36 +89,41 @@ sub view_fmt_edit_html {
   if (!defined $postfmt_name) {
     $postfmt_name='view_html';
   }
-  if (!defined $postfmt) { # Try to construct some nice default from fmt
-    $postfmt=$self->fmt($postfmt_name);
+  if (!defined $postfmt) { # Try to construc some nice default
+    $postfmt=$self->fmt('view');
     if ($postfmt !~ /<Var\s+Edit>/i) {
-      $postfmt = "<Var Edit> $postfmt";
-      $postfmt .='<br>' if ($self->input_type eq 'radio');
-    }  }
+      $postfmt = "<Var Edit> $postfmt<br>";
+    }
+  }
 
   my $res="";
 
-  my $posts=$self->to_tab->list;
-  my ($p, $got, $edit, $fmt);
-  if ($self->input_type eq 'select') {
-    $res.='<select name="' . $self->name . '" size=1>';
-    while (defined ($p=$posts->get_next)) {
-      if ($self->got_val && $p->id eq $self->val) {$got="selected"} else {$got=""}
-      $edit='<option ' . $got . ' value="' . $p->id .'">';
-      $fmt=$postfmt; $fmt =~ s/<Var\s*Edit>/$edit/i;
-      $res.=$p->view_fmt($postfmt_name, $fmt);
-    }  
-    $res.='</select>';
-  } else {
-    while (defined ($p=$posts->get_next)) {
-      if ($self->got_val && $p->id eq $self->val) {$got="checked"} else {$got=""}
-      $edit='<input type="radio" name="' . $self->name.
-      '" value="' . $p->id .  "\" $got>";
-      $fmt=$postfmt; $fmt =~ s/<Var\s*Edit>/$edit/i;
-      $res.=$p->view_fmt($postfmt_name, $fmt);
-    }
-  }
-  $res;
+   my $posts=$self->to_tab->sql_list('select * from ' .$self->to_tab_name . 
+                                    ' where ' . $self->super_name . 
+                                    ' is null');
+  $res.=$self->build_edit_tree($posts,$postfmt,$postfmt_name);
+  return $res;
+}
+
+sub build_edit_tree {
+  my ($self, $posts,$postfmt,$postfmt_name)=@_;
+  my $res="<dl>";
+
+  my ($p, $got, $edit, $fmt);  
+  while (defined ($p=$posts->get_next)) {    
+     if ($self->got_val && $p->id eq $self->val) {$got="checked"} else {$got=""}
+    $edit='<dt><input type="radio" name="' . $self->name.
+      '" value="' . $p->id .
+        "\" $got>";
+     $fmt=$postfmt; $fmt =~ s/<Var\s*Edit>/$edit/i;
+    $res.=$p->view_fmt($postfmt_name, $fmt);
+    $res.='</dt><dd>';
+    $res.=$self->build_edit_tree($self->to_tab->list($self->super_name . "=" . 
+                                                     $p->id),$postfmt,
+                                 $postfmt_name);
+    $res.='<dd>';
+  }  
+  $res."</dl>";
 }
 
 =head2 $fld->view_fmt($fmt_name, $fmt)
@@ -158,12 +147,21 @@ sub view_fmt {
   if (!defined $fmt) {$fmt=$self->fmt($fmt_name)}
 
   if ($fmt =~ /^<InRel>(.*)$/i) {
-    $fmt=$1;
+     $fmt=$1;
     my $p=DBIx::HTMLView::Fmt->new;
     return $p->parse_fmt($self, $fmt_name, $fmt);
   } else {
-    return "No match!" if !defined($self->post);
-    return $self->post->view_fmt($fmt_name, $fmt) if $self->got_val;
+    if ($self->got_val) {
+      my $p=$self->post;
+      my $fld;
+      foreach ($self->to_tab->fld_names) {
+	if (!$p->got_fld($_)) {
+	  $fmt =~ s/<\s*fld\s+$_\s*>//gi;
+	}
+      }
+      my $res=$p->view_fmt($fmt_name, $fmt);
+      return $res;
+    }
     return "";
   }
 }
@@ -173,7 +171,7 @@ sub default_fmt {
   if (defined $kind && $kind eq 'edit_html') {
     return '<InRel><perl>$self->view_fmt_edit_html("view_html")</perl>';
   }
-  
+
   return DBIx::HTMLView::Relation::default_fmt(@_)
 }
 

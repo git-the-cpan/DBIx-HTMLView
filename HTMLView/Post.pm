@@ -27,7 +27,7 @@
   print $post->view_html;   # View a post
 
   $post->set('testf', 7);   # Set the testf field to 7
-  $post->update;            # Update the databse with the modified post
+  $post->update;            # Update the database with the modified post
 
   $post=DBIx::HTMLView::Post->new($tab)   # Create a new post
   $post->set('testf', 7);   # Set the testf field to 7
@@ -49,17 +49,19 @@ require DBIx::HTMLView::Fmt;
 =head2 $post=DBIx::HTMLView::Post->new($tab, $data, $sth)
 
 Creates a new post belonging to the table $tab (a DBIx::HTMLview::Table
-object). $data and $sth is used to initiale the post with it's fields,
+object). $data and $sth is used to initialize the post with it's fields,
 which can be done in several ways:
 
 1. To create a new empty post with no data set, simply don't specify 
    those arguments.
 2. If $data is an array reference, $sth is supposed to be the object 
    returned by a DBI execude call with a select command, and $data should 
-   be the array ref with the data you want to create a post object of.
+   be the array ref with the data you want to create a post object of. If
+   the same fieldname apperas twice in the select the first one is 
+   presumed to be the one belonging to this post.
 3. If $data is a hash reference, it is supposed to contain Fld/Value 
    pairs.
-4. If $datat is CGI object the CGI params is supposed to be Fld/Value 
+4. If $data is a CGI object the CGI params is supposed to be Fld/Value 
    pairs. Note that relations in this case is defined by setting the name 
    of the relation to the id's of the posts related to, eg it will be 
    defined once for every post.
@@ -67,49 +69,51 @@ which can be done in several ways:
 =cut
 
 sub new {
-	my $this = shift;
-	my $class = ref($this) || $this;
-	my $self=	bless {}, $class;
+  my $this = shift;
+  my $class = ref($this) || $this;
+  my $self=  bless {}, $class;
 
-	my ($tab,$data,$sth) = @_;
-	croak "Bad table $tab, use DBIx::HTMLView::Table::new_post" if (!$tab->isa('DBIx::HTMLView::Table'));
-	$self->{'tab'}=$tab;
+  my ($tab,$data,$sth) = @_;
+  croak "Bad table $tab, use DBIx::HTMLView::Table::new_post" if (!$tab->isa('DBIx::HTMLView::Table'));
+  $self->{'tab'}=$tab;
 
-	# Insert data from ctor args
-	if (defined $data) {
-		if (ref $data eq "ARRAY") {
-			my $cnt=0;
-			foreach (@{$sth->{'NAME'}}) {
-				my $a=$self->tab->new_fld($_,$data->[$cnt]);
-				$self->set($_, $a);			
-				$cnt++;
-			}
-		} elsif (ref $data eq "HASH") {
-			foreach (keys %$data) {
-				$self->set($_, $data->{$_});
-			}
-		} elsif ($data->isa('CGI')) {
-			foreach ($tab->fld_names) {
-				my @val=$data->param($_);
-				if (defined $val[0]) {
-					$self->set($_,\@val); 
-				}
-			}
-		} else {
-			croak "Can't create post from: $data";
-		}
-	}
+  # Insert data from ctor args
+  if (defined $data) {
+    if (ref $data eq "ARRAY") {
+      my $cnt=0;
+      foreach (@{$sth->{'NAME'}}) {
+        if (! $self->got_fld($_)) { # As we only want the first one
+          my $a=$self->tab->new_fld($_,$data->[$cnt]);
+          $self->set($_, $a);      
+          $cnt++;
+        }
+      }
+    } elsif (ref $data eq "HASH") {
+      foreach (keys %$data) {
+        $self->set($_, $data->{$_});
+      }
+    } elsif ($data->isa('CGI')) {
+      foreach ($tab->fld_names) {
+        my @val=$data->param($_);
+        if (defined $val[0]) {
+          $self->set($_,\@val); 
+        }
+      }
+    } else {
+      croak "Can't create post from: $data";
+    }
+  }
 
-	# Create relation objects
-	my $id=undef;
-	if ($self->got_id) {$id=$self->id}
-	# FIXME: Should this be done even if id is not defined?
-	foreach ($self->tab->flds) {
-		if ($_->isa('DBIx::HTMLView::Relation') && !$self->got_fld($_->name)) {
-			$self->set($_->name, $self->tab->new_fld($_->name,$id));
-		}
-	}
-	$self;
+  # Create relation objects
+  my $id=undef;
+  if ($self->got_id) {$id=$self->id}
+  # FIXME: Should this be done even if id is not defined?
+  foreach ($self->tab->flds) {
+    if ($_->isa('DBIx::HTMLView::Relation') && !$self->got_fld($_->name)) {
+      $self->set($_->name, $self->tab->new_fld($_->name,$id));
+    }
+  }
+  $self;
 }
 
 =head2 $post->set($fld, $val)
@@ -125,13 +129,13 @@ reference to an array of the id's of the posts being related to.
 =cut
 
 sub set {
-	my ($self, $fld, $val)=@_;
+  my ($self, $fld, $val)=@_;
 
-	if (!UNIVERSAL::isa($val,'DBIx::HTMLView::Fld')) {
-		$val=$self->tab->new_fld($fld,$val);
-	}
-	$val->set_post($self);
-	$self->{'data'}{$fld}=$val;
+  if (!UNIVERSAL::isa($val,'DBIx::HTMLView::Fld')) {
+    $val=$self->tab->new_fld($fld,$val);
+  }
+  $val->set_post($self);
+  $self->{'data'}{$fld}=$val;
 }
 
 =head2 $post->got_fld($fld_name)
@@ -142,8 +146,8 @@ Returns true if we have data specified for the fld named $fld_name.
 
 sub got_fld {
   #FIXME: Will this work for relations?
-	my ($self, $fld_name)=@_;
-	(defined $self->{'data'}{$fld_name});
+  my ($self, $fld_name)=@_;
+  (defined $self->{'data'}{$fld_name});
 }
 
 =head2 $post->view_text
@@ -153,8 +157,8 @@ Returns a string that could be used to view this post in text format
 =cut
 
 sub view_text {
-	my $self=shift;
-	$self->view_fmt("view_text");
+  my $self=shift;
+  $self->view_fmt("view_text");
 }
 
 =head2 $post->view_html
@@ -165,8 +169,8 @@ Returns a string that could be used to view this post in html format.
 
 
 sub view_html {
-	my $self=shift;
-	$self->view_fmt("view_html");
+  my $self=shift;
+  $self->view_fmt("view_html");
 }
 
 =head2 $post->view_fmt($fmt_name, $fmt)
@@ -197,8 +201,8 @@ sub view_fmt {
 
   if (!defined $fmt) {$fmt=$self->tab->post_fmt($fmt_name)}
 
-	my $p=DBIx::HTMLView::Fmt->new;
-	return $p->parse_fmt($self, $fmt_name, $fmt);
+  my $p=DBIx::HTMLView::Fmt->new;
+  return $p->parse_fmt($self, $fmt_name, $fmt);
 }
 
 =head2 $post->fld_names
@@ -210,9 +214,9 @@ use $post->tab->fld_names to list all Fld of the post.
 
 #FIXME: Check where thisone is used.
 sub fld_names {
-	my $self=shift;
-	confess "No fealds found!" if (!defined $self->{'data'});
-	keys %{$self->{'data'}};
+  my $self=shift;
+  confess "No fields found!" if (!defined $self->{'data'});
+  keys %{$self->{'data'}};
 }
 
 =head2 $post->fld($fld_name)
@@ -224,16 +228,16 @@ Returns the Fld representing that data of the Fld named $fld_name.
 
 sub fld {shift->val(@_);}
 sub val {
-	my ($self, $fld)=@_;
-	if (!defined 	$self->{'data'}{$fld}) {
-		if ($self->got_id) {
-			confess ("Getting not implemented yet");
-		} else {
-			return $self->tab->fld($fld);
-		}
-	} else {
-		return $self->{'data'}{$fld};
-	}
+  my ($self, $fld)=@_;
+  if (!defined   $self->{'data'}{$fld}) {
+    if ($self->got_id) {
+      confess ("Getting not implemented yet");
+    } else {
+      return $self->tab->fld($fld);
+    }
+  } else {
+    return $self->{'data'}{$fld};
+  }
 }
 
 =head2 $post->tab
@@ -244,20 +248,20 @@ Returns the table this post belongs to (a DBIx::HTMLView::Table object).
 
 
 sub tab {
-	my $self=shift;
-	confess "No table defined!" if (!defined $self->{'tab'});
-	$self->{'tab'};
+  my $self=shift;
+  confess "No table defined!" if (!defined $self->{'tab'});
+  $self->{'tab'};
 }
 
 =head2 $post->got_id
 
-Returns true if the id of this post is defined, which is the same as that the post is represented in the databse as well (which is not true for new posts that not yet have been added to the datbase, using $post->update).
+Returns true if the id of this post is defined, which is the same as that the post is represented in the database as well (which is not true for new posts that not yet have been added to the datbase, using $post->update).
 
 =cut
 
 sub got_id {
-	my $self=shift;
-	(defined $self->{'data'}{$self->tab->id->name});
+  my $self=shift;
+  (defined $self->{'data'}{$self->tab->id->name});
 }
 
 
@@ -268,10 +272,10 @@ Returns the id of this post or dies with "No id defined" if it is not defined. S
 =cut
 
 sub id {
-	my $self=shift;
-	my $val=$self->val($self->tab->id->name);
-	confess "No id defined" if (!defined $val || !$val->got_val);
-	$val->val;
+  my $self=shift;
+  my $val=$self->val($self->tab->id->name);
+  confess "No id defined" if (!defined $val || !$val->got_val);
+  $val->val;
 }
 
 =head2 $post->update
@@ -283,18 +287,24 @@ Updates the database with the data found in this object or creats a new post in 
 #FIXME: Make sure the new id we get are assigned properly to this object
 #       as well 
 sub update {
-	my $self=shift;
-	if ($self->got_id) {
-		$self->tab->change($self);
-	} else {
-		$self->tab->insert($self);
-	}
+  my $self=shift;
+  if ($self->got_id) {
+    $self->tab->change($self);
+  } else {
+    $self->tab->insert($self);
+  }
 }
 
 sub var {
-	my ($self, $var)=@_;
-	return "";
+  my ($self, $var)=@_;
+  return "";
 }
 
 1;
 
+
+# Local Variables:
+# mode:              perl
+# tab-width:         8
+# perl-indent-level: 2
+# End:

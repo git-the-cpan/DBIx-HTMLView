@@ -25,21 +25,21 @@
 
 use DBIx::HTMLView;
 my $dbi=DB("DBI:mSQL:HTMLViewTester:localhost", "", "", 
-					 Table ('Test', Id('id'), Str('testf')),
-					 Table('Test2', Id('id'), Str('str'), Int('nr'))
-					);
+           Table ('Test', Id('id'), Str('testf')),
+           Table('Test2', Id('id'), Str('str'), Int('nr'))
+          );
 
 
 =head1 DESCRIPTION
 
-HTMLView is a set of modules to hanlde relational SQL databases
-through a DBI interface and create web userinterfaces to them. Among
-it's features are the posibility to handle relations in the same
+HTMLView is a set of modules to handle relational SQL databases
+through a DBI interface and create web user interfaces to them. Among
+its features are the posibility to handle relations in the same
 manner as fields and it is easily extended with additional field or
 relation specifications as well as custom editors and viewers.
 
-For a general overview description of the system se the README file,
-for a quick start se the test.pl script. It conatins instructions on
+For a general overview description of the system see the README file,
+for a quick start see the test.pl script. It conatins instructions on
 how to set up a simple test database and then it preforms all the
 basic opperations in a comented manner. There is also a tutorial
 (not yet written) describing the basics of relation databases and 
@@ -48,10 +48,10 @@ a man page for every package describing it's methods and
 functionality.
 
 This package contains shourtcuts for the constructors of some of the
-basic objects under DBIx::HTMLView that is used to created the
+basic objects under DBIx::HTMLView that are used to created the
 database description structure. This structure describes all the
-tabels in the database and there fields, and is then used as an
-interface to the database and the tabels.
+tables in the database and its fields, and is then used as an
+interface to the database and the tables.
 
 For a description of parameters to the separate functions see the
 diffrent packages man pages, eg DB is actualy the new method of
@@ -62,6 +62,7 @@ objects:
   mysqlDB
   Table
   Int
+  Date
   Str
   Bool
   Text
@@ -79,7 +80,7 @@ package DBIx::HTMLView;
 use strict;
 use vars qw(@ISA $VERSION @EXPORT);
 
-$VERSION="0.6";
+$VERSION="0.7";
 
 require Exporter;
 require DBIx::HTMLView::DB;
@@ -88,57 +89,73 @@ require DBIx::HTMLView::msqlDB;
 require DBIx::HTMLView::Table;
 require DBIx::HTMLView::Int;
 require DBIx::HTMLView::Str;
+require DBIx::HTMLView::Date;
 require DBIx::HTMLView::Bool;
 require DBIx::HTMLView::Text;
 require DBIx::HTMLView::Id;
 require DBIx::HTMLView::N2N;
 require DBIx::HTMLView::N2One;
+require DBIx::HTMLView::Tree;
 
 @ISA         = qw(Exporter);
-@EXPORT      = qw(DB mysqlDB msqlDB Table Str Bool Text Id N2N Int N2One);
+@EXPORT      = qw(DB mysqlDB msqlDB Table Str Bool Text Id N2N Int N2One Date Tree);
 
 sub DB {
   msqlDB(@_) # For backwards compatibility
 }
 
 sub mysqlDB {
-	DBIx::HTMLView::mysqlDB->new(@_);
+  DBIx::HTMLView::mysqlDB->new(@_);
 }
 
 sub msqlDB {
-	DBIx::HTMLView::msqlDB->new(@_);
+  DBIx::HTMLView::msqlDB->new(@_);
 }
 
 sub Table {
-	DBIx::HTMLView::Table->new(@_);
+  DBIx::HTMLView::Table->new(@_);
 }
 
 sub Int {
-	DBIx::HTMLView::Int->new(@_);
+  DBIx::HTMLView::Int->new(@_);
 }
 
 sub Str {
-	DBIx::HTMLView::Str->new(@_);
+  DBIx::HTMLView::Str->new(@_);
+}
+
+sub Date {
+  DBIx::HTMLView::Date->new(@_);
 }
 
 sub Bool {
-	DBIx::HTMLView::Bool->new(@_);
+  DBIx::HTMLView::Bool->new(@_);
 }
 
 sub Text {
-	DBIx::HTMLView::Text->new(@_);
+  DBIx::HTMLView::Text->new(@_);
 }
 
 sub Id {
-	DBIx::HTMLView::Id->new(@_);
+  DBIx::HTMLView::Id->new(@_);
 }
 
 sub N2N {
-	DBIx::HTMLView::N2N->new(@_);
+  DBIx::HTMLView::N2N->new(@_);
 }
 
 sub N2One {
-	DBIx::HTMLView::N2One->new(@_);
+  DBIx::HTMLView::N2One->new(@_);
+}
+
+sub Tree {
+  DBIx::HTMLView::Tree->new(@_);
 }
 
 1;
+
+# Local Variables:
+# mode:              perl
+# tab-width:         8
+# perl-indent-level: 2
+# End:

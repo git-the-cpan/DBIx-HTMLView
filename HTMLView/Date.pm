@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-#  Relation.pm - A relation base class
+#  Date.pm - A simple date filed
 #  (c) Copyright 1999 Hakan Ardo <hakan@debian.org>
 #
 #  This program is free software; you can redistribute it and/or modify
@@ -19,29 +19,39 @@
 
 =head1 NAME
 
-  DBIx::HTMLView::Relation - A relation base class
+  DBIx::HTMLView::Date - A simple date filed
+
 
 =head1 SYNOPSIS
 
-  $fld=$post->fld('id');
+  $fld=$post->fld('testf');
   print $fld->view_html;
 
 =head1 DESCRIPTION
 
-This is a subcalss of DBIx::HTMLView::Fld used to represent relations
-between tables in the databse as well as the data contained in them.
-Se the DBIx::HTMLView:.Fld manpage for info on the methods of this class.
+This is a subcalss of DBIx::HTMLView::Str used to represent date
+fields in the databse as well as the data contained in it. Se the
+DBIx::HTMLView::Field and DBIx::HTMLView:.Fld (the superclass of
+Field) manpage for info on the methods of this class.
 
 =cut
 
-package DBIx::HTMLView::Relation;
+package DBIx::HTMLView::Date;
 use strict;
+use Carp;
 
 use vars qw(@ISA);
-require DBIx::HTMLView::Fld;
-@ISA = qw(DBIx::HTMLView::Fld);
+require DBIx::HTMLView::Str;
+@ISA = qw(DBIx::HTMLView::Str);
 
-sub default_fmt {return DBIx::HTMLView::Fld::default_fmt(@_)}
+sub name_vals {
+  my $self=shift;
+  ({name=>$self->name, val=> $self->tab->db->sql_escape($self->val) });
+}
+
+sub sql_create {my $self=shift;$self->db->sql_type("Date",$self)}
+
+
 
 1;
 

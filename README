@@ -1,5 +1,5 @@
 HTMLView - For creating web userinterfaces to DBI databases.
-(c) Copyright 1998 Hakan Ardo <hakan@debian.org>
+(c) Copyright 1998-2000 Hakan Ardo <hakan@debian.org>
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -34,9 +34,9 @@ all users belonging to the group named sudo while "grp->gid = 27" would
 match all users belonging to the group with gid 27).
 
 There is also a fmt language used to specify how the data in a post
-should be presented. It works in a template like way with a html like
-format, and it can be specified on a PostSet, Post or Relation/Field
-level.
+or a set of posts should be presented. It works in a template like way
+with a html like format, and it can be specified on a PostSet, Post or
+Relation/Field level.
 
 It's most frequent use is that it allows you to write a fmt file and
 in it place a "<node>...</node>" construct, which will repeat the
@@ -52,6 +52,12 @@ It's also possible to insert perl code that's executed using
 "<perl>...</perl>" constructs. Se the README.fmt file for a complete
 description of the language.
 
+For a simple example se the Test2.fmt file which will work together
+with the Test2 table from the set of test tabels used by test.pl. To
+view the content of the entire table, try:
+
+  Formated2.cgi?tab=Test2&fmt=Test2
+
 
 Build and Install
 -----------------
@@ -64,14 +70,14 @@ make
 make test
 make install
 
-This will run the tests on a public remote server located here in Sweden,
-so if you're not connected they will fail. Se the config.pm file on how 
-to set up a local db for running the test on in that case.
+This will run the tests on a database named HTMLViewTester in a local
+mysql server which you'll have to create first, se the config.pm file
+if you don't know howto.
 
-The default tests uses a mSQL database which means that you'll need 
-DBD::mSQL in order to run them. The config.pm file also contains 
-instructions on how to set up a test database for mySQL, and in that
-case you'll of course need DBD::mysql instead. You should be able to
+The default tests uses a mySQL database which means that you'll need 
+DBD::mySQL in order to run them. The config.pm file also contains 
+instructions on how to set up a test database for mSQL, and in that
+case you'll of course need DBD::msql instead. You should be able to
 use this system with other database engines as well and in that case
 you'll need their DBD's. 
 

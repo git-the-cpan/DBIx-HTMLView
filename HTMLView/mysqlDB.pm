@@ -35,6 +35,7 @@ are inherited from the superclass: DBIx::HTMLView::DB -- only
 those that are specific to mysql are overridden.
 
 =head1 METHODS
+
 =cut
 
 package DBIx::HTMLView::mysqlDB;
@@ -48,45 +49,60 @@ require DBIx::HTMLView::DB;
 @ISA = qw(DBIx::HTMLView::DB);
 
 sub insert {
-	my ($self, $tab, $post)=@_;
-	my $values="";
-	my $names="";
-	my $cmd="insert into " . $tab->name;
+  my ($self, $tab, $post)=@_;
+  my $values="";
+  my $names="";
+  my $cmd="insert into " . $tab->name;
 
- 	foreach my $f ($post->fld_names) {
-		foreach ($post->fld($f)->name_vals) {
-			$names .=  $_->{'name'}.", ";
-			$values .= $_->{'val'}.", ";
-		}
-	}
-	$names =~ s/, $//;
-	$values =~ s/, $//;
+   foreach my $f ($post->fld_names) {
+    foreach ($post->fld($f)->name_vals) {
+      $names .=  $_->{'name'}.", ";
+      $values .= $_->{'val'}.", ";
+    }
+  }
 
-	my $sth=$self->send($cmd . " ($names) VALUES ($values)");
-	$post->set($tab->id->name, $sth->{'insertid'}); 
+  # Add id as it might be the only field
+  $names .= $post->tab->id->name;
+  $values .= "NULL";
 
- 	foreach my $f ($post->fld_names) {
-		$post->fld($f)->post_updated;
-	}
+  my $sth=$self->send($cmd . " ($names) VALUES ($values)");
+    my $insid;
+  if (defined $sth->{'mysql_insertid'}) {
+    $insid=$sth->{'mysql_insertid'};
+  } else {
+    $insid=$sth->{'insertid'};
+  }      
+  $post->set($tab->id->name, $insid);
+
+   foreach my $f ($post->fld_names) {
+    $post->fld($f)->post_updated;
+  }
 }
 
 sub sql_type {
-	my ($self, $type, $fld)=@_;
-	my $t=lc($type);
+  my ($self, $type, $fld)=@_;
+  my $t=lc($type);
 
-	if ($fld->got_data('sql_type')) {return $fld->data('sql_type')}
+  if ($fld->got_data('sql_type')) {return $fld->data('sql_type')}
 
-	my $s="";
-	$s="(".$fld->data('sql_size').")" if ($fld->got_data('sql_size'));
+  my $s="";
+  $s="(".$fld->data('sql_size').")" if ($fld->got_data('sql_size'));
 
-	if ($t eq 'id') {return "INT$s NOT NULL auto_increment, PRIMARY KEY (" .
-										 $fld->name . ')'}
-	if ($t eq 'int') {return "INT$s"}
-	if ($t eq 'str') {if (!$s) {$s="(100)"} return "CHAR$s"}
-	if ($t eq 'text') {return "TEXT$s"}
-	if ($t eq 'bool') {if (!$s) {$s="(1)"} return "CHAR$s"}
+  if ($t eq 'id') {return "INT$s NOT NULL auto_increment, PRIMARY KEY (" .
+                     $fld->name . ')'}
+  if ($t eq 'int') {return "INT$s"}
+  if ($t eq 'date') {return "DATE"}
+  if ($t eq 'str') {if (!$s) {$s="(100)"} return "CHAR$s"}
+  if ($t eq 'text') {return "TEXT$s"}
+  if ($t eq 'bool') {if (!$s) {$s="(1)"} return "CHAR$s"}
 
-	die "Bad type $t";
+  die "Bad type $t";
 }
 
 1;
+
+# Local Variables:
+# mode:              perl
+# tab-width:         8
+# perl-indent-level: 2
+# End:

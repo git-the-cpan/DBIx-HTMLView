@@ -1,0 +1,191 @@
+diff -rc HTMLView/DB.pm /tmp/HTMLView/HTMLView/DB.pm
+*** HTMLView/DB.pm	Wed Apr 26 11:36:42 2000
+--- /tmp/HTMLView/HTMLView/DB.pm	Wed Apr 26 11:32:41 2000
+***************
+*** 181,194 ****
+  sub update {
+  	my ($self, $tab, $post)=@_;
+  	my $cmd="update " . $tab->name . " set ";
+! 	
+  	foreach my $f ($post->fld_names) {
+  		foreach ($post->fld($f)->name_vals) {
+! 			$cmd.= $_->{'name'} ."=". $_->{'val'} . ", ";
+  		}
+  	}
+  	$cmd=~s/, $//;
+! 	$cmd.=" where " . $tab->id->name . "=" . $post->id; 
+  	$self->send($cmd);
+  
+  	foreach my $f ($post->fld_names) {
+--- 181,198 ----
+  sub update {
+  	my ($self, $tab, $post)=@_;
+  	my $cmd="update " . $tab->name . " set ";
+! 	my $oldid;	
+  	foreach my $f ($post->fld_names) {
+  		foreach ($post->fld($f)->name_vals) {
+! 			if ($_->{'name'} eq $tab->id->name . 'old') {
+! 				$oldid= $_->{'val'} 
+! 			} else {
+! 				$cmd.= $_->{'name'} ."=". $_->{'val'} . ", ";
+! 			}
+  		}
+  	}
+  	$cmd=~s/, $//;
+! 	$cmd.=" where " . $tab->id->name . "=" . $oldid; 
+  	$self->send($cmd);
+  
+  	foreach my $f ($post->fld_names) {
+diff -rc HTMLView/Id.pm /tmp/HTMLView/HTMLView/Id.pm
+*** HTMLView/Id.pm	Wed Apr 26 11:50:58 2000
+--- /tmp/HTMLView/HTMLView/Id.pm	Wed Apr 26 11:32:41 2000
+***************
+*** 55,67 ****
+  require DBIx::HTMLView::Int;
+  @ISA = qw(DBIx::HTMLView::Int);
+  
+  sub default_fmt {
+  	my ($self, $kind)=@_;
+  	if ($kind eq 'edit_html') {
+  		return 	$self->fmt('view_html') . 
+  			'<perl>if ($self->got_val) { return ' .
+! 				'"<input type=hidden name=\"".$self->name . "\" value=\"".$self->var("val")."\">"' . 
+! 			'} </perl>';
+  	}
+  	return DBIx::HTMLView::Field::default_fmt(@_);
+  }
+--- 55,74 ----
+  require DBIx::HTMLView::Int;
+  @ISA = qw(DBIx::HTMLView::Int);
+  
++ sub editable {
++ 	my $self=shift;
++ 	return 'type=hidden' if !$self->got_data('editable');
++ 	
++ }
++ 
+  sub default_fmt {
+  	my ($self, $kind)=@_;
+  	if ($kind eq 'edit_html') {
+  		return 	$self->fmt('view_html') . 
+  			'<perl>if ($self->got_val) { return ' .
+! 				'"<input type=hidden name=\"".$self->name . "old\" value=\"".$self->var("val")."\">"} </perl>' .
+! 			'<input '.$self->editable. 
+! 			' name="<var name>" value="<perl>js_escape($self->var("val"))</perl>" size='.$self->edit_size . '>';
+  	}
+  	return DBIx::HTMLView::Field::default_fmt(@_);
+  }
+diff -rc HTMLView/Post.pm /tmp/HTMLView/HTMLView/Post.pm
+*** HTMLView/Post.pm	Wed Apr 26 12:06:15 2000
+--- /tmp/HTMLView/HTMLView/Post.pm	Wed Apr 26 11:32:41 2000
+***************
+*** 93,102 ****
+  				$self->set($_, $data->{$_});
+  			}
+  		} elsif ($data->isa('CGI')) {
+  			foreach ($tab->fld_names) {
+  				my @val=$data->param($_);
+  				if (defined $val[0]) {
+! 					$self->set($_,\@val); 
+  				}
+  			}
+  		} else {
+--- 93,106 ----
+  				$self->set($_, $data->{$_});
+  			}
+  		} elsif ($data->isa('CGI')) {
++ 			my @val=$data->param($tab->id->name.'old');
++ 			if (defined $val[0]) {
++ 				$self->set($tab->id->name.'old',\@val);
++ 			}
+  			foreach ($tab->fld_names) {
+  				my @val=$data->param($_);
+  				if (defined $val[0]) {
+! 					$self->set($_,\@val);
+  				}
+  			}
+  		} else {
+***************
+*** 261,267 ****
+  
+  sub got_id {
+  	my $self=shift;
+! 	(defined $self->{'data'}{$self->tab->id->name});
+  }
+  
+  
+--- 265,271 ----
+  
+  sub got_id {
+  	my $self=shift;
+! 	(defined $self->{'data'}{$self->tab->id->name . 'old'});
+  }
+  
+  
+***************
+*** 289,296 ****
+--- 293,302 ----
+  sub update {
+  	my $self=shift;
+  	if ($self->got_id) {
++ 	        #confess "id defined";
+  		$self->tab->change($self);
+  	} else {
++ 	        #confess "No id defined";
+  		$self->tab->insert($self);
+  	}
+  }
+diff -rc HTMLView/Table.pm /tmp/HTMLView/HTMLView/Table.pm
+*** HTMLView/Table.pm	Wed Apr 26 12:25:00 2000
+--- /tmp/HTMLView/HTMLView/Table.pm	Wed Apr 26 11:32:41 2000
+***************
+*** 443,449 ****
+  
+  sub get {
+    my ($self, $id)=@_;
+!   $self->list($self->id->name . "=" . $id)->first;
+  }
+  
+  =head2 $table->msql_create
+--- 416,422 ----
+  
+  sub get {
+    my ($self, $id)=@_;
+!   $self->list($self->id->name . "='$id'")->first;
+  }
+  
+  =head2 $table->msql_create
+diff -rc HTMLView/mysqlDB.pm /tmp/HTMLView/HTMLView/mysqlDB.pm
+*** HTMLView/mysqlDB.pm	Wed Apr 26 00:10:47 2000
+--- /tmp/HTMLView/HTMLView/mysqlDB.pm	Wed Apr 26 11:32:41 2000
+***************
+*** 60,72 ****
+  			$values .= $_->{'val'}.", ";
+  		}
+  	}
+! 
+  	# Add id as it might be the only field
+! 	$names .= $post->tab->id->name;
+! 	$values .= "NULL";
+! 
+  	my $sth=$self->send($cmd . " ($names) VALUES ($values)");
+! 	$post->set($tab->id->name, $sth->{'mysql_insertid'}); 
+  
+   	foreach my $f ($post->fld_names) {
+  		$post->fld($f)->post_updated;
+--- 60,74 ----
+  			$values .= $_->{'val'}.", ";
+  		}
+  	}
+! 	
+  	# Add id as it might be the only field
+! 	#$names .= $post->tab->id->name;
+! 	#$values .= "NULL";
+! 	$names =~ s/,\s$//;
+! 	$values =~ s/,\s$//;
+! #	print "$cmd ($names) VALUES ($values)\n";
+  	my $sth=$self->send($cmd . " ($names) VALUES ($values)");
+! 	$post->set($tab->id->name, $sth->{'insertid'}); 
+  
+   	foreach my $f ($post->fld_names) {
+  		$post->fld($f)->post_updated;

@@ -23,7 +23,7 @@
 
 =head1 SYNOPSIS
 
-	$view=new DBIx::HTMLView::CGIReqEdit($script, $post);
+  $view=new DBIx::HTMLView::CGIReqEdit($script, $post);
   print $view->view_html;
 
 =head1 DESCRIPTION
@@ -59,15 +59,15 @@ passed to the user will bring up the other tabels as well for editing.
 
 
 sub new {
-	my $this = shift;
-	my $class = ref($this) || $this;
-	my $self=       bless {}, $class;
+  my $this = shift;
+  my $class = ref($this) || $this;
+  my $self=       bless {}, $class;
 
-	my ($script,$post,$read_only,$cgi)=@_;
+  my ($script,$post,$read_only,$cgi)=@_;
   die "$post is not a DBIx::HTMLView::Post!" if (!$post->isa('DBIx::HTMLView::Post'));
   $self->{'script'}=$script;
-	$self->{'post'}=$post;
-	$self->{'cgi'}=$cgi;
+  $self->{'post'}=$post;
+  $self->{'cgi'}=$cgi;
   if (defined $read_only) {
     $self->{'read_only'}=$read_only;
   } else {
@@ -117,14 +117,17 @@ Returns the html code for the editor as specified by previous methods.
 =cut
 
 sub view_html {
-	my ($self)=@_;
+  my ($self)=@_;
   my $tab=$self->tab;
   my $res="";
-
+  
   $res.="<form method=POST action=" . $self->script_name . "><dl>";
   $res.= "<input type=hidden name=_Action value=update>";
-
+  if ($self->got_cgi && defined $self->cgi->param('_done2')) {
+    $res.= '<input type=hidden name=_done value="' . $self->cgi->param('_done2') . '">';
+  }
   $res.="<table>";
+  $res.="<input type=submit value=OK>";
   foreach ($self->tab->fld_names) {
     if (! ($_ =~ $self->read_only)) {
       $res.= "<tr><td valign=top>";
@@ -137,3 +140,9 @@ sub view_html {
   $res.="</dl><input type=submit value=OK></from>";
   $res;
 }
+
+# Local Variables:
+# mode:              perl
+# tab-width:         8
+# perl-indent-level: 2
+# End:

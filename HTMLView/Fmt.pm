@@ -47,9 +47,9 @@ my $tags = {'var'=>'var',
 use Carp;
 
 sub new {
-	my $this = shift;
-	my $class = ref($this) || $this;
-	my $self=	bless {}, $class;
+  my $this = shift;
+  my $class = ref($this) || $this;
+  my $self=  bless {}, $class;
 
   $self;
 }
@@ -69,23 +69,23 @@ Set $val as the curent token, and $kind as the kind of that token.
 =cut
 
 sub token {
-	my ($self, $kind, $val)=@_;
-	if (defined $val) {
-		$self->{'token_kind'}=$kind;
-		$self->{'token_val'}=$val;
-	} elsif (defined $kind) {
-		return ($kind eq $self->{'token_kind'});
-	} else {
-		return $self->{'token_val'};
-	}
+  my ($self, $kind, $val)=@_;
+  if (defined $val) {
+    $self->{'token_kind'}=$kind;
+    $self->{'token_val'}=$val;
+  } elsif (defined $kind) {
+    return ($kind eq $self->{'token_kind'});
+  } else {
+    return $self->{'token_val'};
+  }
 }
 
 
 sub parse_fmt {
-	my ($me, $self, $fmt_name, $fmt)=@_;  # NOTE: this object is named $me, 
-                                        # not $slef as the evals needs $self
+  my ($me, $self, $fmt_name, $fmt)=@_;  # NOTE: this object is named $me, 
+                                        # not $self as the evals needs $self
                                         # to be something else.
-	my ($val1, $val2, $val3, $val4, $val5); #FIXME: those vars to be used in the fmt evals, should not have to be defined here like this
+  my ($val1, $val2, $val3, $val4, $val5); #FIXME: those vars to be used in the fmt evals, should not have to be defined here like this
 
   my $res="";
   my $r;
@@ -162,7 +162,7 @@ sub fmt {
     $self->next_token;
     if ($self->token('fmtstart')) {$d++}
     if ($self->token('fmtend')) {$d--}
-    if ($self->token('end')) {confess "Unexpekted end of string in fmt"}
+    if ($self->token('end')) {confess "Unexpected end of string in fmt"}
     if ($d>0) {$str.=$self->{'text_token'}}
   }
   $self->next_token;
@@ -177,7 +177,7 @@ sub perl  {
   while (! $self->token('perlend')) {
     $str.=$self->{'text_token'};
     $self->next_token;
-    if ($self->token('end')) {confess "Unexpekted end of string in perl"}
+    if ($self->token('end')) {confess "Unexpected end of string in perl"}
   }
   $self->next_token;
   return $str;
@@ -194,3 +194,9 @@ sub txt {
   return $str;
 }
 1;
+
+# Local Variables:
+# mode:              perl
+# tab-width:         8
+# perl-indent-level: 2
+# End:

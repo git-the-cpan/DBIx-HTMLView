@@ -4,6 +4,7 @@ NEWS
 README
 README.fmt
 Formated.cgi
+Formated2.cgi
 Test2.fmt
 Makefile.PL
 config.pm
@@ -11,6 +12,8 @@ test.pl
 View.cgi
 HTMLView.pm
 HTMLView/CGIListView.pm
+HTMLView/CGIQueryListView.pm
+HTMLView/CGIGermanListView.pm
 HTMLView/CGIReqEdit.pm
 HTMLView/CGIView.pm
 HTMLView/DB.pm
@@ -31,4 +34,7 @@ HTMLView/msqlDB.pm
 HTMLView/Bool.pm
 HTMLView/N2One.pm
 HTMLView/Fmt.pm
-
+HTMLView/Tree.pm
+HTMLView/Date.pm
+editable_id.patch
+editable_id.README

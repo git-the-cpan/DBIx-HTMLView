@@ -45,8 +45,8 @@ require DBIx::HTMLView::Field;
 @ISA = qw(DBIx::HTMLView::Field);
 
 sub name_vals {
-	my $self=shift;
-	({name=>$self->name, val=> $self->tab->db->sql_escape($self->val) });
+  my $self=shift;
+  ({name=>$self->name, val=> $self->tab->db->sql_escape($self->val) });
 }
 
 sub sql_create {my $self=shift;$self->db->sql_type("Str",$self)}
@@ -54,3 +54,9 @@ sub sql_create {my $self=shift;$self->db->sql_type("Str",$self)}
 
 
 1;
+
+# Local Variables:
+# mode:              perl
+# tab-width:         8
+# perl-indent-level: 2
+# End:

@@ -79,23 +79,29 @@ sub view_false {
 }
 
 sub default_fmt {
-	my ($self, $kind)=@_;
-	if ($kind eq 'view_text' || $kind eq 'view_html') {
-		return 	'<perl>if ($self->got_val && $self->val eq $self->true) {return $self->view_true} else {return $self->view_false}</perl>';
-	} 
-	if ($kind eq 'edit_html') {
+  my ($self, $kind)=@_;
+  if ($kind eq 'view_text' || $kind eq 'view_html') {
+    return   '<perl>if ($self->got_val && $self->val eq $self->true) {return $self->view_true} else {return $self->view_false}</perl>';
+  } 
+  if ($kind eq 'edit_html') {
     return '<perl>if ($self->got_val && $self->val eq $self->true) {'.
                    '$val2="";$val1="checked"} else {$val1="";$val2="checked"}'.
            '"";</perl>'.
            "<input type='radio' name='<var name>' value='" . $self->true .
-				   "' <perl>\$val1</perl> >" . $self->view_true . "&nbsp;&nbsp;" . 
+           "' <perl>\$val1</perl> >" . $self->view_true . "&nbsp;&nbsp;" . 
            "<input type='radio' name='<var name>' value='" . $self->false .
-					 "' <perl>\$val2</perl>>" . $self->view_false;
+           "' <perl>\$val2</perl>>" . $self->view_false;
 
   }
-	return DBIx::HTMLView::Field::default_fmt(@_);
+  return DBIx::HTMLView::Field::default_fmt(@_);
 }
 
 sub sql_create {my$self=shift;$self->db->sql_type("Bool",$self)}
 
 1;
+
+# Local Variables:
+# mode:              perl
+# tab-width:         8
+# perl-indent-level: 2
+# End:

@@ -30,20 +30,20 @@
 
 =head1 DESCRIPTION
 
-This is a subcalss of DBIx::HTMLView::Str used to represent larger
-texts. The main differenc from a Str is that the default edit_html
-editor uses a <textarea>...</textarea> construc instead of an 
+This is a subclass of DBIx::HTMLView::Str used to represent larger
+texts. The main difference from a Str is that the default edit_html
+editor uses a <textarea>...</textarea> construct instead of an 
 <input ...> tag.
 
-This fld also has two parameters that is specified in the $data hash
-passed to the constructor (se the DBIx::HTMLView::Fld manpage). They
+This fld also has two parameters that are specified in the $data hash
+passed to the constructor (see the DBIx::HTMLView::Fld manpage). They
 are 'width', the width of the <textarea> editor in characters
 (defaults is 80) and 'height', the height of the <textarea> editor in
 characters (default is 50).
 
-Except for the methods described in the supercleasses
+Except for the methods described in the superclasses
 (DBIx::HTMLView::Fld, DBIx::HTMLView::Field, DBIx::HTMLView::Str)
-there is also the following methods.
+there are also the following methods.
 
 =head1 METHODS
 =cut
@@ -58,43 +58,49 @@ require DBIx::HTMLView::Text;
 
 =head2 $fld->width
 
-Returns the witdh in characres of the default edit_html editor.
+Returns the witdh in characters of the default edit_html editor.
 
 =cut
 
 sub width {
-	my $self=shift;
-	if (!$self->got_data('width')) {
-		return 80;
-	} else {
-		return $self->data('width');
-	}
+  my $self=shift;
+  if (!$self->got_data('width')) {
+    return 80;
+  } else {
+    return $self->data('width');
+  }
 }
 
 =head2 $fld->height
 
-Returns the height in characres of the default edit_html editor.
+Returns the height in characters of the default edit_html editor.
 
 =cut
 
 sub height {
-	my $self=shift;
-	if (!$self->got_data('height')) {
-		return 10;
-	} else {
-		return $self->data('height');
-	}
+  my $self=shift;
+  if (!$self->got_data('height')) {
+    return 10;
+  } else {
+    return $self->data('height');
+  }
 }
 
 sub default_fmt {
-	my ($self, $kind)=@_;
-	if ($kind eq 'edit_html') {
-		return 		'<textarea wrap=soft cols=' . $self->width . ' rows='.
-			$self->height.' name="<var name>"><var val></textarea>';
-	}
-	return DBIx::HTMLView::Field::default_fmt(@_);
+  my ($self, $kind)=@_;
+  if ($kind eq 'edit_html') {
+    return     '<textarea wrap=soft cols=' . $self->width . ' rows='.
+      $self->height.' name="<var name>"><var val></textarea>';
+  }
+  return DBIx::HTMLView::Field::default_fmt(@_);
 }
 
 sub sql_create {my $self=shift;$self->db->sql_type("Text",$self)}
 
 1;
+
+# Local Variables:
+# mode:              perl
+# tab-width:         8
+# perl-indent-level: 2
+# End:

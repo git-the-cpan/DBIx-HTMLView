@@ -53,12 +53,12 @@ use Carp;
 =head2 $dbi=DBIx::HTMLView::DB->new($db, $user, $pass, @tabs)
 =head2 $dbi=DBIx::HTMLView::DB->new($dbh, @tabs)
 
-Creats a new databse represenation to the databse engine represented 
+Creates a new database representation to the database engine represented 
 by the DBI data_source $db and connect's to it using $user and $pass 
-as user name and pasword. @tabs is a list of the tabels contained in 
+as user name and pasword. @tabs is a list of the tables contained in 
 the database in form of DBIx::HTMLView::Table objects.
 
-If you're db needs more initialising than a DBI connect you can
+If you'r db needs more initialising than a DBI connect you can
 initialise the connection yourself and then pass the dbh (as returned
 by the DBI->connect call) using the second form of the constructor.
 
@@ -68,32 +68,32 @@ destroyed.
 =cut
 
 sub new {
-	my $this = shift;
-	my $class = ref($this) || $this;
-	my $self=	bless {}, $class;
+  my $this = shift;
+  my $class = ref($this) || $this;
+  my $self=  bless {}, $class;
 
-	my $db=shift;
-	if (ref $db) {
-		$self->{'dbh'}=$db;
+  my $db=shift;
+  if (ref $db) {
+    $self->{'dbh'}=$db;
   } else {
-		my $user=shift;
-		my $pass=shift;
-		$self->{'dbh'}=DBI->connect($db, $user, $pass);
-		if(!$self->{'dbh'}) {croak "DBI->connect failed on $db for user $user";}
-	}
+    my $user=shift;
+    my $pass=shift;
+    $self->{'dbh'}=DBI->connect($db, $user, $pass);
+    if(!$self->{'dbh'}) {croak "DBI->connect failed on $db for user $user";}
+  }
 
-	my $t;
-	foreach $t (@_) {
-		$self->{'tabs'}{$t->name}=$t;
-		$t->set_db($self);
-	}
+  my $t;
+  foreach $t (@_) {
+    $self->{'tabs'}{$t->name}=$t;
+    $t->set_db($self);
+  }
 
-	$self;
+  $self;
 }
 
 sub DESTROY {
-	my $self=shift;
-	$self->{'dbh'}->disconnect;
+  my $self=shift;
+  $self->{'dbh'}->disconnect;
 }
 
 =head2 $dbi->send($cmd)
@@ -104,16 +104,16 @@ on errors. The $sth is returned.
 =cut
 
 sub send {
-	my $self=shift;
-	my $cmd=shift;
-	my $sth = $self->{'dbh'}->prepare($cmd);
-	if (!$sth) {
-		confess "Error preparing $cmd: " . $sth->errstr . "\n";
-	}
-	if (!$sth->execute) {
-		confess "Error executing $cmd:" . $sth->errstr . "\n";
-	}
-	$sth;
+  my $self=shift;
+  my $cmd=shift;
+  my $sth = $self->{'dbh'}->prepare($cmd);
+  if (!$sth) {
+    confess "Error preparing $cmd: " . $sth->errstr . "\n";
+  }
+  if (!$sth->execute) {
+    confess "Error executing $cmd:" . $sth->errstr . "\n";
+  }
+  $sth;
 }
 
 =head2 $dbi->tab($tab)
@@ -124,9 +124,9 @@ $tab.
 =cut
 
 sub tab {
-	my ($self, $tab)=@_;
-	croak "Unknown table $tab" if (!defined $self->{'tabs'}{$tab});
-	$self->{'tabs'}{$tab};
+  my ($self, $tab)=@_;
+  croak "Unknown table $tab" if (!defined $self->{'tabs'}{$tab});
+  $self->{'tabs'}{$tab};
 }
 
 =head2 $dbi->tabs
@@ -137,9 +137,9 @@ tables in the database.
 =cut
 
 sub tabs {
-	my $self=shift;
-	croak "No tabels fond!" if (!defined $self->{'tabs'});
-	values %{$self->{'tabs'}};
+  my $self=shift;
+  croak "No tables fond!" if (!defined $self->{'tabs'});
+  values %{$self->{'tabs'}};
 }
 
 =head2 $dbi->sql_escape
@@ -150,7 +150,7 @@ That is, it changes the string q[I'm a string] to q['I\'m a string'];
 =cut
 
 sub sql_escape {
-	my $self=shift;
+  my $self=shift;
     my $str = shift;
     $str =~ s/(['\\])/\\$1/g;
     return "'$str'";
@@ -164,10 +164,10 @@ object).
 =cut
 
 sub del {
-	my ($self, $tab, $id)=@_;
-	if ($id =~ /^\d+$/) {$id=$tab->id->name . " = $id";}
-	my $cmd="delete from " . $tab->name . " where " . $id;
-	$self->send($cmd);
+  my ($self, $tab, $id)=@_;
+  if ($id =~ /^\d+$/) {$id=$tab->id->name . " = $id";}
+  my $cmd="delete from " . $tab->name . " where " . $id;
+  $self->send($cmd);
 }
 
 =head2 $dbi->update($tab, $post)
@@ -179,69 +179,69 @@ object) with the data contained in the $post object.
 =cut
 
 sub update {
-	my ($self, $tab, $post)=@_;
-	my $cmd="update " . $tab->name . " set ";
-	
-	foreach my $f ($post->fld_names) {
-		foreach ($post->fld($f)->name_vals) {
-			$cmd.= $_->{'name'} ."=". $_->{'val'} . ", ";
-		}
-	}
-	$cmd=~s/, $//;
-	$cmd.=" where " . $tab->id->name . "=" . $post->id; 
-	$self->send($cmd);
+  my ($self, $tab, $post)=@_;
+  my $cmd="update " . $tab->name . " set ";
+  
+  foreach my $f ($post->fld_names) {
+    foreach ($post->fld($f)->name_vals) {
+      $cmd.= $_->{'name'} ."=". $_->{'val'} . ", ";
+    }
+  }
+  $cmd=~s/, $//;
+  $cmd.=" where " . $tab->id->name . "=" . $post->id; 
+  $self->send($cmd);
 
-	foreach my $f ($post->fld_names) {
-		$post->fld($f)->post_updated;
-	}
+  foreach my $f ($post->fld_names) {
+    $post->fld($f)->post_updated;
+  }
 }
 
 =head2 $dbi->insert($tab, $post)
 
 Insert the post $post (a DBIx::HTMLView::Post object) into the table
 $tab (a DBIx::HTMLView::Table object). This is the method to override
-if you need to change the way new post get's there id numbers
+if you need to change the way new post get's their id numbers
 assigned. This method should also make sure to set the id fld of $post
 to the id assigned to it.
 
 =cut
 
 sub insert {
-	my ($self, $tab, $post)=@_;
-	my $values="";
-	my $names="";
-	my $cmd="insert into " . $tab->name;
+  my ($self, $tab, $post)=@_;
+  my $values="";
+  my $names="";
+  my $cmd="insert into " . $tab->name;
 
-	foreach my $f ($post->fld_names) {
-		foreach ($post->fld($f)->name_vals) {
-			$names .=  $_->{'name'}.", ";
-			$values .= $_->{'val'} .", ";
-		}
-	}
- 	$names =~ s/, $//;
-	$values =~ s/, $//;
+  foreach my $f ($post->fld_names) {
+    foreach ($post->fld($f)->name_vals) {
+      $names .=  $_->{'name'}.", ";
+      $values .= $_->{'val'} .", ";
+    }
+  }
+   $names =~ s/, $//;
+  $values =~ s/, $//;
 
-	$self->send($cmd . " ($names) VALUES ($values)");
+  $self->send($cmd . " ($names) VALUES ($values)");
 
-	foreach my $f ($post->fld_names) {
-		$post->fld($f)->post_updated;
-	}
+  foreach my $f ($post->fld_names) {
+    $post->fld($f)->post_updated;
+  }
 }
 
 =head2 $dbi->sql_create
 
-Will create the tabels of the database using SQL commands that works
-with msql. The databse has to be created by hand using msqladmin or
+Will create the tables of the database using SQL commands that works
+with msql. The database has to be created by hand using msqladmin or
 msqlconfig.
 
 =cut
 
 sub sql_create {
-	my $self=shift;
+  my $self=shift;
 
-	foreach ($self->tabs) {
-		$_->sql_create;
-	}
+  foreach ($self->tabs) {
+    $_->sql_create;
+  }
 }
 
 =head2 $dbi->sql_create_table($table)
@@ -252,43 +252,50 @@ commands that works with msql.
 =cut
 
 sub sql_create_table {
-	my ($self, $table)=@_;
-	my $cmd="CREATE TABLE ".$table->name . "(";
+  my ($self, $table)=@_;
+  my $cmd="CREATE TABLE ".$table->name . "(";
 
- 	foreach ($table->flds) {
- 		my $type=$_->sql_create;
- 		if (defined $type) {
- 			$cmd .= $_->name . " " . $type . ", ";
- 		}
- 	}
-	$cmd =~ s/, $//;
-	$self->send($cmd.")");
+   foreach ($table->flds) {
+     my $type=$_->sql_create;
+     if (defined $type) {
+       $cmd .= $_->name . " " . $type . ", ";
+     }
+   }
+  $cmd =~ s/, $//;
+  $self->send($cmd.")");
 }
 
 =head2 $dbi->sql_type($type, $fld)
 
 Returns the SQL type string used for the type $type of the Fld $fld. $type 
-should be one of "Id", "Int", "Str", "Text", "Bool", and $fld should be a 
-DBIx::HTMLView::Fld object.
+should be one of "Id", "Int", "Str", "Text", "Bool", "Date" and $fld 
+should be a DBIx::HTMLView::Fld object.
 
 =cut
 
 sub sql_type {
-	my ($self, $type, $fld)=@_;
-	my $t=lc($type);
+  my ($self, $type, $fld)=@_;
+  my $t=lc($type);
 
-	if ($fld->got_data('sql_type')) {return $fld->data('sql_type')}
+  if ($fld->got_data('sql_type')) {return $fld->data('sql_type')}
 
-	my $s="";
-	$s="(".$fld->data('sql_size').")" if ($fld->got_data('sql_size'));
-	
+  my $s="";
+  $s="(".$fld->data('sql_size').")" if ($fld->got_data('sql_size'));
+  
 
-	if ($t eq 'id') {return "INT$s"}
-	if ($t eq 'int') {return "INT$s"}
-	if ($t eq 'str') {if (!$s) {$s="(100)"} return "CHAR$s"}
-	if ($t eq 'text') {if (!$s) {$s="(500)"} return "CHAR$s"}
-	if ($t eq 'bool') {if (!$s) {$s="(1)"} return "CHAR$s"}
+  if ($t eq 'id') {return "INT$s"}
+  if ($t eq 'int') {return "INT$s"}
+  if ($t eq 'date') {return "DATE"}
+  if ($t eq 'str') {if (!$s) {$s="(100)"} return "CHAR$s"}
+  if ($t eq 'text') {if (!$s) {$s="(500)"} return "CHAR$s"}
+  if ($t eq 'bool') {if (!$s) {$s="(1)"} return "CHAR$s"}
 
-	die "Bad type $t";
+  die "Bad type $t";
 }
 1;
+
+# Local Variables:
+# mode:              perl
+# tab-width:         8
+# perl-indent-level: 2
+# End:

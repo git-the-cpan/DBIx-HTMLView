@@ -49,10 +49,10 @@ fields through several relations (eg rel1->rel2->field).
 Here is a more precise definition of the language useed:
 
   <expr>       = <bool_value> (("AND" | "OR") <bool_value>)?
-	<bool_value> = <fld_spec> <opperator> <value> | "(" <expr> ")"
-	<fld_spec>   = <fld_name> ("->" <fld_name>)*
-	<fld_name>   = <word>
-	<value>      = <literal>|<fld_spec>
+  <bool_value> = <fld_spec> <opperator> <value> | "(" <expr> ")"
+  <fld_spec>   = <fld_name> ("->" <fld_name>)*
+  <fld_name>   = <word>
+  <value>      = <literal>|<fld_spec>
   <literal>    = \d+ | "'" <string> "'" 
   <string>     = [^']*
   <word>       = [a-zA-Z0-9_.]+
@@ -83,41 +83,41 @@ is: ['<', '>', '=', '<=', '>=', '<>', 'LIKE', 'RLIKE', 'CLIKE',
 =cut
 
 sub new {
-	my $this = shift;
-	my $class = ref($this) || $this;
-	my $self=	bless {}, $class;
-	
-	my ($tab, $str, $flds, $opps) =@_;
+  my $this = shift;
+  my $class = ref($this) || $this;
+  my $self=  bless {}, $class;
+  
+  my ($tab, $str, $flds, $opps) =@_;
   if (defined $opps) {
-		$self->{'opps'}=$opps;
-	} else {
-		$self->{'opps'}=['<', '>', '=', '<=', '>=', '<>', 'LIKE', 'RLIKE', 
-										 'CLIKE'];
-	}
-	croak("Bad table: $tab") if (!$tab->isa('DBIx::HTMLView::Table'));
-	$self->{'tab'}=$tab;
-	$self->{'str'}=$str;
-	$self->{'where'}="";
-	$self->{'flds'}={};
-	$self->{'tabs'}={};
+    $self->{'opps'}=$opps;
+  } else {
+    $self->{'opps'}=['<', '>', '=', '<=', '>=', '<>', 'LIKE', 'RLIKE', 
+                     'CLIKE'];
+  }
+  croak("Bad table: $tab") if (!$tab->isa('DBIx::HTMLView::Table'));
+  $self->{'tab'}=$tab;
+  $self->{'str'}=$str;
+  $self->{'where'}="";
+  $self->{'flds'}={};
+  $self->{'tabs'}={};
 
-	$self->add_tab($self->tab->name);
-	if (defined $flds) {
-		$self->add_fld($self->tab->name . "." . $self->tab->id->name);
-		foreach (@$flds) {
-			$self->add_fld($self->tab->name . "." . $self->tab->fld($_)->field_name);
-		}
-	} else {
-		foreach ($self->tab->flds) {
-			if ($_->isa('DBIx::HTMLView::Field')) {
-				$self->add_fld($self->tab->name . "." . $_->name);
-			}
-		}
-	}
+  $self->add_tab($self->tab->name);
+  if (defined $flds) {
+    $self->add_fld($self->tab->name . "." . $self->tab->id->name);
+    foreach (@$flds) {
+      $self->add_fld($self->tab->name . "." . $self->tab->fld($_)->field_name);
+    }
+  } else {
+    foreach ($self->tab->flds) {
+      if ($_->isa('DBIx::HTMLView::Field')) {
+        $self->add_fld($self->tab->name . "." . $_->name);
+      }
+    }
+  }
 
-	$self->next_token;
-	$self->expr;
-	$self;
+  $self->next_token;
+  $self->expr;
+  $self;
 }
 
 =head2 $sel->sql_select
@@ -128,10 +128,54 @@ query passed to the constructor.
 =cut
 
 sub sql_select {
-	my $self=shift;
-	"select distinct " . join(', ', keys %{$self->{'flds'}}) . " from " . 
-           		join(', ', keys %{$self->{'tabs'}}) . " where " . 
-							$self->{'where'};
+  my $self=shift;
+  my $tab=$self->tab->name;
+  my $flds="";
+
+  # Place the fields from this tbale first so that the post objects
+  # created later wont get fields from the related tabels in case those
+  # tabels have fields with the same name
+  foreach (keys %{$self->{'flds'}}) {
+    if (/^$tab\./) {
+      $flds = $_ . ", " . $flds;
+    } else {
+      $flds .= $_ . ", ";
+    }
+  }
+  $flds =~ s/, $//;
+
+  return "select distinct $flds from " . 
+               join(', ', keys %{$self->{'tabs'}}) . " where " . 
+              $self->{'where'};
+}
+
+=head2 $sel->sql_count
+
+Returns a SQL select query counting the posts described in the search
+query passed to the constructor.
+
+=cut
+
+sub sql_count {
+  my $self=shift;
+  my $tab=$self->tab->name;
+  my $flds="";
+
+  # Place the fields from this tbale first so that the post objects
+  # created later wont get fields from the related tabels in case those
+  # tabels have fields with the same name
+  foreach (keys %{$self->{'flds'}}) {
+    if (/^$tab\./) {
+      $flds = $_ . ", " . $flds;
+    } else {
+      $flds .= $_ . ", ";
+    }
+  }
+  $flds =~ s/, $//;
+
+  return "select count(*) from " . 
+               join(', ', keys %{$self->{'tabs'}}) . " where " . 
+              $self->{'where'};
 }
 
 =head2 $sel->tab
@@ -176,7 +220,7 @@ the $opps parameter to the constructor.
 =cut
 
 sub opps {
-	@{shift->{'opps'}};
+  @{shift->{'opps'}};
 }
 
 =head2 $sel->token
@@ -194,15 +238,15 @@ Set $val as the curent token, and $kind as the kind of that token.
 =cut
 
 sub token {
-	my ($self, $kind, $val)=@_;
-	if (defined $val) {
-		$self->{'token_kind'}=$kind;
-		$self->{'token_val'}=$val;
-	} elsif (defined $kind) {
-		return ($kind eq $self->{'token_kind'});
-	} else {
-		return $self->{'token_val'};
-	}
+  my ($self, $kind, $val)=@_;
+  if (defined $val) {
+    $self->{'token_kind'}=$kind;
+    $self->{'token_val'}=$val;
+  } elsif (defined $kind) {
+    return ($kind eq $self->{'token_kind'});
+  } else {
+    return $self->{'token_val'};
+  }
 }
 
 =head2 $sel->next_token
@@ -213,58 +257,58 @@ the current token using $self->token.
 =cut
 
 sub next_token {
-	my $self=shift;
+  my $self=shift;
 
-	# <operator>
-	$self->{'str'} =~ s/^\s+//;
-	foreach ($self->opps) {
-		if ($self->{'str'} =~ s/^$_//) {
-			$self->token("opp",$_);
-			return;
-		}
-	}
+  # <operator>
+  $self->{'str'} =~ s/^\s+//;
+  foreach ($self->opps) {
+    if ($self->{'str'} =~ s/^$_//) {
+      $self->token("opp",$_);
+      return;
+    }
+  }
 
-	# "->"
-	if ($self->{'str'} =~ s/^->//) {
-		$self->token("fld_separator", "->");
-		return;
-	}
+  # "->"
+  if ($self->{'str'} =~ s/^->//) {
+    $self->token("fld_separator", "->");
+    return;
+  }
 
-	# (, )
-	if ($self->{'str'} =~ s/^(\()// ||
-			$self->{'str'} =~ s/^(\))//
-		 ) {
-		$self->token("par", $1);
-		return;
-	}
+  # (, )
+  if ($self->{'str'} =~ s/^(\()// ||
+      $self->{'str'} =~ s/^(\))//
+     ) {
+    $self->token("par", $1);
+    return;
+  }
 
-	# "'" <string> "'"
-	if ($self->{'str'} =~ s/^(\'.*?[^\\]\')// || 
-			$self->{'str'} =~ s/^(\'\')//
-		 ) {
-		$self->token("string", $1);
-		return;
-	}
+  # "'" <string> "'"
+  if ($self->{'str'} =~ s/^(\'.*?[^\\]\')// || 
+      $self->{'str'} =~ s/^(\'\')//
+     ) {
+    $self->token("string", $1);
+    return;
+  }
 
-	# \d+
-	if ($self->{'str'} =~ s/^(-?\d*\.?\d+)//) {
-		$self->token("number", $1);
-		return;
-	}
+  # \d+
+  if ($self->{'str'} =~ s/^(-?\d*\.?\d+)//) {
+    $self->token("number", $1);
+    return;
+  }
 
-	# <fld_name>, "AND" | "OR", 
-	if ($self->{'str'} =~ s/^([a-zåäöÅÄÖA-Z0-9_\.]+)//) {
-		$self->token("word", $1);
-		return;
-	}
+  # <fld_name>, "AND" | "OR", 
+  if ($self->{'str'} =~ s/^([a-zåäöÅÄÖA-Z0-9_\.]+)//) {
+    $self->token("word", $1);
+    return;
+  }
 
-	# end of string
-	if ($self->{'str'} eq "") {
-		$self->token("end", "");
-		return;
-	}
+  # end of string
+  if ($self->{'str'} eq "") {
+    $self->token("end", "");
+    return;
+  }
 
-	croak("Bad string: " . $self->{'str'});
+  croak("Bad string: " . $self->{'str'});
 }
 
 =head2 $sel->expr
@@ -278,92 +322,98 @@ the description.
 =cut
 
 sub expr {
-	my $self=shift;
+  my $self=shift;
 
-	$self->bool_value;
-	while (!$self->token("end") && !$self->token('par')) {
-		if ($self->token("word") && ($self->token =~ /^and$/i || 
-																 $self->token =~ /^or$/i )) {
+  $self->bool_value;
+  while (!$self->token("end") && !$self->token('par')) {
+    if ($self->token("word") && ($self->token =~ /^and$/i || 
+                                 $self->token =~ /^or$/i )) {
 
-			$self->add_to_where(uc($self->token));
-			$self->next_token;
-			$self->bool_value;
-		} else {
-			croak ("Syntax error at: " . $self->{'str'});
-		}
-	}
+      $self->add_to_where(uc($self->token));
+      $self->next_token;
+      $self->bool_value;
+    } else {
+      croak ("Syntax error at: " . $self->{'str'});
+    }
+  }
 }
 
 sub bool_value {
-	my $self=shift;
+  my $self=shift;
 
-	# "(" <expr> ")"
-	if ($self->token("par") && $self->token eq '(') {
-		$self->add_to_where('(');
-		$self->next_token;
-		$self->expr;
-		if ($self->token("par") && $self->token eq ')') {
-			$self->add_to_where(')');
-			$self->next_token;
-		} else {
-			croak ("Syntax error at: " . $self->{'str'});
-		}
-	} 
-	
-	# <fld_spec> <opperator> <value> 
-	elsif ($self->token("word")) {
-		$self->fld_spec;
-		if ($self->token("opp")) {
-			$self->add_to_where($self->token);
-			#print "opp: " . $self->token . "\n";
-			$self->next_token;
-		} else {
-			croak ("Syntax error at: " . $self->{'str'});
-		}
-		$self->value
-	}
+  # "(" <expr> ")"
+  if ($self->token("par") && $self->token eq '(') {
+    $self->add_to_where('(');
+    $self->next_token;
+    $self->expr;
+    if ($self->token("par") && $self->token eq ')') {
+      $self->add_to_where(')');
+      $self->next_token;
+    } else {
+      croak ("Syntax error at: " . $self->{'str'});
+    }
+  } 
+  
+  # <fld_spec> <opperator> <value> 
+  elsif ($self->token("word")) {
+    $self->fld_spec;
+    if ($self->token("opp")) {
+      $self->add_to_where($self->token);
+      #print "opp: " . $self->token . "\n";
+      $self->next_token;
+    } else {
+      croak ("Syntax error at: " . $self->{'str'});
+    }
+    $self->value
+  }
 }
 
 sub fld_spec {
-	my $self=shift;
+  my $self=shift;
 
-	if ($self->token("word")) {
-		my $base=$self->token;
-		my @sub;
-		$self->next_token;
-		while ($self->token("fld_separator")) {
-			$self->next_token;
-			if ($self->token("word")) {
-				push @sub, $self->token;
-			} else {
-				croak ("Syntax error at: " . $self->{'str'});
-			}
-			$self->next_token;
-		}
-		#print "Fld: $base -> @sub<br>\n";
-		$self->add_to_where("(" . $self->tab->fld($base)->sql_data($self, \@sub));
-	} else {
-		croak ("Syntax error at: " . $self->{'str'});
-	}
+  if ($self->token("word")) {
+    my $base=$self->token;
+    my @sub;
+    $self->next_token;
+    while ($self->token("fld_separator")) {
+      $self->next_token;
+      if ($self->token("word")) {
+        push @sub, $self->token;
+      } else {
+        croak ("Syntax error at: " . $self->{'str'});
+      }
+      $self->next_token;
+    }
+    #print "Fld: $base -> @sub<br>\n";
+    $self->add_to_where("(" . $self->tab->fld($base)->sql_data($self, \@sub));
+  } else {
+    croak ("Syntax error at: " . $self->{'str'});
+  }
 }
 
 sub value {
-	my $self=shift;
+  my $self=shift;
 
-	# <literal>
-	if ($self->token("string") || $self->token("number")) {
-		$self->add_to_where($self->token . ")");
-		#print "Value: " . $self->token . "\n";
-		$self->next_token;
-	}
+  # <literal>
+  if ($self->token("string") || $self->token("number")) {
+    $self->add_to_where($self->token . ")");
+    #print "Value: " . $self->token . "\n";
+    $self->next_token;
+  }
 
-	# <fld_spec>
-	elsif ($self->token("word")) {
-		$self->fld_spec;
-	}
-	else {
-		croak ("Syntax error at: " . $self->{'str'});
-	}
+  # <fld_spec>
+  elsif ($self->token("word")) {
+    $self->fld_spec;
+  }
+  else {
+    croak ("Syntax error at: " . $self->{'str'});
+  }
 }
 
 1;
+
+# Local Variables:
+# mode:              perl
+# tab-width:         8
+# perl-indent-level: 2
+# End:

@@ -98,30 +98,30 @@ good idea to specify fmt to something decent as well.
 =cut
 
 sub new {
-	my $this = shift;
-	my $class = ref($this) || $this;
-	my $self=	bless {}, $class;
+  my $this = shift;
+  my $class = ref($this) || $this;
+  my $self=  bless {}, $class;
 
-	my ($name, $data, $tab)=@_;
-	$self->{'name'}=$name;
-	$self->{'tab'}=$tab;
-	
-	if (ref $data eq "HASH") {
-		$self->{'data'}=$data;
-	} elsif (ref $data eq "ARRAY") {
-		if (ref $this) {$self->{'data'}=$this->{'data'};}
-		$self->{'posts'}=DBIx::HTMLView::PostSet->new($self->to_tab);
-		foreach (@$data) {
-			if ($_ ne "do_edit") {
-				$self->{'posts'}->add($self->to_tab->new_post({$self->tab->id->name=>$_}));
-			}
-		}
-	} else {
-		$self->{'id'}=$data;
-		if (ref $this) {$self->{'data'}=$this->{'data'};}
-	}
-	
-	$self;
+  my ($name, $data, $tab)=@_;
+  $self->{'name'}=$name;
+  $self->{'tab'}=$tab;
+  
+  if (ref $data eq "HASH") {
+    $self->{'data'}=$data;
+  } elsif (ref $data eq "ARRAY") {
+    if (ref $this) {$self->{'data'}=$this->{'data'};}
+    $self->{'posts'}=DBIx::HTMLView::PostSet->new($self->to_tab);
+    foreach (@$data) {
+      if ($_ ne "do_edit") {
+        $self->{'posts'}->add($self->to_tab->new_post({$self->tab->id->name=>$_}));
+      }
+    }
+  } else {
+    $self->{'id'}=$data;
+    if (ref $this) {$self->{'data'}=$this->{'data'};}
+  }
+  
+  $self;
 }
 
 =head2 $fld->db
@@ -131,8 +131,8 @@ Returns the database handle of the tabels.
 =cut
 
 sub db {
-	my $self=shift;
-	$self->tab->db;
+  my $self=shift;
+  $self->tab->db;
 }
 
 =head2 $fld->id
@@ -142,12 +142,12 @@ Returns the id of the post this relation belongs to.
 =cut
 
 sub id {
-	my $self=shift;
+  my $self=shift;
 
-	if (!defined $self->{'id'}) {
-		$self->{'id'}=$self->post->id;
-	}
-	$self->{'id'};
+  if (!defined $self->{'id'}) {
+    $self->{'id'}=$self->post->id;
+  }
+  $self->{'id'};
 }
 
 =head2 $fld->to_tab_name
@@ -157,7 +157,7 @@ Returns the name of the to table.
 =cut
 
 sub to_tab_name {
-	shift->data('tab')
+  shift->data('tab')
 }
 
 =head2 $fld->to_tab
@@ -167,8 +167,8 @@ Returns the DBIx::HTMLView::Table object representing the to table.
 =cut
 
 sub to_tab {
-	my $self=shift;
-	$self->tab->db->tab($self->to_tab_name);
+  my $self=shift;
+  $self->tab->db->tab($self->to_tab_name);
 }
 
 =head2 $fld->from_field_name
@@ -179,12 +179,12 @@ $data param to the constructor.
 =cut
 
 sub from_field_name {
-	my $self=shift;
-	if ($self->got_data('from_field')) {
-		return $self->data('from_field');
-	} else {
-		return $self->tab->name . "_id";
-	}
+  my $self=shift;
+  if ($self->got_data('from_field')) {
+    return $self->data('from_field');
+  } else {
+    return $self->tab->name . "_id";
+  }
 }
 
 =head2 $fld->to_field_name
@@ -195,12 +195,12 @@ $data param to the constructor.
 =cut
 
 sub to_field_name {
-	my $self=shift;
-	if ($self->got_data('to_field')) {
-		return $self->data('to_field');
-	} else {
-		return $self->to_tab_name . "_id";
-	}
+  my $self=shift;
+  if ($self->got_data('to_field')) {
+    return $self->data('to_field');
+  } else {
+    return $self->to_tab_name . "_id";
+  }
 }
 
 =head2 $fld->lnk_tab_name
@@ -212,12 +212,12 @@ the constructor.
 
 
 sub lnk_tab_name {
-	my $self=shift;
-	if ($self->got_data('lnk_tab')) {
-		return $self->data('lnk_tab');
-	} else {
-		return $self->tab->name . "_to_" . $self->to_tab_name;
-	}
+  my $self=shift;
+  if ($self->got_data('lnk_tab')) {
+    return $self->data('lnk_tab');
+  } else {
+    return $self->tab->name . "_to_" . $self->to_tab_name;
+  }
 }
 
 =head2 $fld->id_name
@@ -228,12 +228,12 @@ in the $data param to the constructor.
 =cut
 
 sub id_name {
-	my $self=shift;
-	if ($self->got_data('id_name')) {
-		return $self->data('id_name');
-	} else {
-		return "id";
-	}
+  my $self=shift;
+  if ($self->got_data('id_name')) {
+    return $self->data('id_name');
+  } else {
+    return "id";
+  }
 }
 
 =head2 $fld->lnk_tab
@@ -246,15 +246,15 @@ table.
 use DBIx::HTMLView;
 
 sub lnk_tab {
-	my $self=shift;
-	if (!defined $self->{'lnk_tab'}) {
-		$self->{'lnk_tab'}=DBIx::HTMLView::Table($self->lnk_tab_name,
-													   DBIx::HTMLView::Id($self->id_name), 
-														 DBIx::HTMLView::Int($self->from_field_name), 
-														 DBIx::HTMLView::Int($self->to_field_name));
-		$self->{'lnk_tab'}->set_db($self->db);
-	}
-	$self->{'lnk_tab'};
+  my $self=shift;
+  if (!defined $self->{'lnk_tab'}) {
+    $self->{'lnk_tab'}=DBIx::HTMLView::Table($self->lnk_tab_name,
+                             DBIx::HTMLView::Id($self->id_name), 
+                             DBIx::HTMLView::Int($self->from_field_name), 
+                             DBIx::HTMLView::Int($self->to_field_name));
+    $self->{'lnk_tab'}->set_db($self->db);
+  }
+  $self->{'lnk_tab'};
 }
 
 =head2 $fld->join_str
@@ -265,12 +265,12 @@ constructor.
 =cut
  
 sub join_str {
-	my $self=shift;
-	if ($self->got_data('join_str')) {
-		return $self->data('join_str');
-	} else {
-		return ", ";
-	}
+  my $self=shift;
+  if ($self->got_data('join_str')) {
+    return $self->data('join_str');
+  } else {
+    return ", ";
+  }
 }
 
 =head2 $fld->extra_sql
@@ -281,12 +281,12 @@ constructor.
 =cut
  
 sub extra_sql {
-	my $self=shift;
-	if ($self->got_data('extra_sql')) {
-		return $self->data('extra_sql');
-	} else {
-		return "ORDER BY ".$self->lnk_tab_name . "." . $self->to_field_name;
-	}
+  my $self=shift;
+  if ($self->got_data('extra_sql')) {
+    return $self->data('extra_sql');
+  } else {
+    return "ORDER BY ".$self->lnk_tab_name . "." . $self->to_field_name;
+  }
 }
 
 
@@ -297,8 +297,8 @@ Returns true if we have a post set. Se the post_set method.
 =cut
 
 sub got_post_set {
-	my $self=shift;
-	(defined $self->{'posts'});
+  my $self=shift;
+  (defined $self->{'posts'});
 }
 
 =head2 $fld->post_set
@@ -317,44 +317,44 @@ post, eg no id was defiedn it will die with "Post not defined!".
 =cut
 
 sub post_set {
-	my $self=shift;
-	my $tab=$self->lnk_tab_name;
-	my $from=$self->from_field_name;
-	my $to=$self->to_field_name;
-	my $totab=$self->to_tab_name;
+  my $self=shift;
+  my $tab=$self->lnk_tab_name;
+  my $from=$self->from_field_name;
+  my $to=$self->to_field_name;
+  my $totab=$self->to_tab_name;
 
-	if (!$self->got_post_set) {		
-		$self->{'posts'}=DBIx::HTMLView::PostSet->new($self->to_tab);
-		# FIXME: Do we relay need to get the entire related post?
-		my $to_flds="";
-		foreach ($self->to_tab->flds) {
-			if ($_->isa('DBIx::HTMLView::Field')) {
-				$to_flds .= $totab . "." . $_->name . ", ";
-			}
-		}
+  if (!$self->got_post_set) {    
+    $self->{'posts'}=DBIx::HTMLView::PostSet->new($self->to_tab);
+    # FIXME: Do we relay need to get the entire related post?
+    my $to_flds="";
+    foreach ($self->to_tab->flds) {
+      if ($_->isa('DBIx::HTMLView::Field')) {
+        $to_flds .= $totab . "." . $_->name . ", ";
+      }
+    }
 
-		my $sth=$self->db->send("select distinct $to_flds $tab.$from, $tab.$to ".
-														"from $tab," . $self->to_tab_name . " " .
-														"where $tab.$from=" . $self->id . " AND " . 
-														"$tab.$to=$totab." . $self->to_tab->id->name . " ".
-														$self->extra_sql);
-		while (my $ref = $sth->fetchrow_arrayref) {
-			my %f;
-			my $cnt=0;
-			foreach ($self->to_tab->flds) {
-				if ($_->isa('DBIx::HTMLView::Field')) {
-								$f{$_->name}=$ref->[$cnt];
-					$cnt++;
-				}
-			}
+    my $sth=$self->db->send("select distinct $to_flds $tab.$from, $tab.$to ".
+                            "from $tab," . $self->to_tab_name . " " .
+                            "where $tab.$from=" . $self->id . " AND " . 
+                            "$tab.$to=$totab." . $self->to_tab->id->name . " ".
+                            $self->extra_sql);
+    while (my $ref = $sth->fetchrow_arrayref) {
+      my %f;
+      my $cnt=0;
+      foreach ($self->to_tab->flds) {
+        if ($_->isa('DBIx::HTMLView::Field')) {
+                $f{$_->name}=$ref->[$cnt];
+          $cnt++;
+        }
+      }
 
-			my $p=$self->to_tab->new_post(\%f);
-			$self->{'posts'}->add($p);
-		}
-	}
-	#use Data::Dumper; print Dumper($self->{'posts'})."<p>";
+      my $p=$self->to_tab->new_post(\%f);
+      $self->{'posts'}->add($p);
+    }
+  }
+  #use Data::Dumper; print Dumper($self->{'posts'})."<p>";
 
-	return $self->{'posts'};
+  return $self->{'posts'};
 }
 
 =head2 $fld->posts
@@ -366,11 +366,11 @@ empthy array.
 =cut
 
 sub posts {
-	my  @posts;
-	my $t=eval {
-		@posts=shift->post_set->posts;
-	}; die unless ($t || $@ =~ /^(No posts!|No id defined)/);
-	@posts;
+  my  @posts;
+  my $t=eval {
+    @posts=shift->post_set->posts;
+  }; die unless ($t || $@ =~ /^(No posts!|No id defined)/);
+  @posts;
 }
 
 =head2 $fld->view_fmt_edit_html($postfmt_name, $postfmt)
@@ -390,46 +390,46 @@ the checkbox button.
 =cut
 
 sub view_fmt_edit_html {
-	my ($self, $postfmt_name, $postfmt)=@_;
-	my $res="";
-	my $foot;
+  my ($self, $postfmt_name, $postfmt)=@_;
+  my $res="";
+  my $foot;
 
-	if (!defined $postfmt_name) {
-		$postfmt_name='view_html';
-	}
-	if (!defined $postfmt) { # Try to construc some nice default from fmt
-		$postfmt=$self->fmt($postfmt_name);
-		$postfmt =~ s/(.*?)<node[^\>]*(\"[^\"]*\")?[^\>]*>(.*?)<\/node>(.*)$/$3/i;
-		$res.=$1; $foot=$4;
-		if ($postfmt !~ /<Var\s+Edit>/i) {
-			$postfmt = "<Var Edit> $postfmt<br>";
-		}
-	}
+  if (!defined $postfmt_name) {
+    $postfmt_name='view_html';
+  }
+  if (!defined $postfmt) { # Try to construc some nice default from fmt
+    $postfmt=$self->fmt($postfmt_name);
+    $postfmt =~ s/(.*?)<node[^\>]*(\"[^\"]*\")?[^\>]*>(.*?)<\/node>(.*)$/$3/i;
+    $res.=$1; $foot=$4;
+    if ($postfmt !~ /<Var\s+Edit>/i) {
+      $postfmt = "<Var Edit> $postfmt<br>";
+    }
+  }
 
-	my @ids;
-	foreach ($self->posts) {
-		push @ids, $_->id;
-	}
+  my @ids;
+  foreach ($self->posts) {
+    push @ids, $_->id;
+  }
 
-	my $posts=$self->to_tab->list;
-	my $p;
-	my ($fmt,$edit);
-	while (defined ($p=$posts->get_next)) {
-		my $got_it="";
-		foreach (@ids) {
-			if ($p->id == $_) {
-				$got_it="checked";
-				last;
-			}
-		}
-		$edit="<input type=checkbox name=\"" . $self->name ."\" value=".
-			    $p->id . " $got_it>";
-		$fmt=$postfmt; $fmt=~s/<Var\s+Edit>/$edit/i;
-		$res.=$p->view_fmt($postfmt_name, $fmt);
-	}
-	$res.="<input type=hidden name=\"" . $self->name ."\" value=do_edit>";
-	$res.=$foot;
-	$res;
+  my $posts=$self->to_tab->list;
+  my $p;
+  my ($fmt,$edit);
+  while (defined ($p=$posts->get_next)) {
+    my $got_it="";
+    foreach (@ids) {
+      if ($p->id == $_) {
+        $got_it="checked";
+        last;
+      }
+    }
+    $edit="<input type=checkbox name=\"" . $self->name ."\" value=".
+          $p->id . " $got_it>";
+    $fmt=$postfmt; $fmt=~s/<Var\s+Edit>/$edit/i;
+    $res.=$p->view_fmt($postfmt_name, $fmt);
+  }
+  $res.="<input type=hidden name=\"" . $self->name ."\" value=do_edit>";
+  $res.=$foot;
+  $res;
 }
 
 =head2 $fld->del($id)
@@ -440,9 +440,9 @@ to any posts.
 =cut
 
 sub del {
-	my ($self, $id)=@_;
+  my ($self, $id)=@_;
 
-	$self->lnk_tab->del($self->from_field_name . "=" . $id);
+  $self->lnk_tab->del($self->from_field_name . "=" . $id);
 }
 
 =head2 $fld->name_vals
@@ -460,24 +460,24 @@ Updates the relation data in the db.
 =cut
 
 sub post_updated {
-	my $self=shift;
+  my $self=shift;
 
-	if ($self->got_post_set) {
-		# FIXME: Those db accesses can be optimised by not deleting and readding
-		#        relations that's not chnaged.
-		
-		# Remove old relations
-		$self->del($self->id);
-		
-		# Add the new ones
-		foreach ($self->posts) {
-			my $post=$self->lnk_tab->new_post({$self->from_field_name => $self->id,
-																				 $self->to_field_name => $_->id});
-			$post->update;
-		}
-	}
-		
-	
+  if ($self->got_post_set) {
+    # FIXME: Those db accesses can be optimised by not deleting and readding
+    #        relations that's not chnaged.
+    
+    # Remove old relations
+    $self->del($self->id);
+    
+    # Add the new ones
+    foreach ($self->posts) {
+      my $post=$self->lnk_tab->new_post({$self->from_field_name => $self->id,
+                                         $self->to_field_name => $_->id});
+      $post->update;
+    }
+  }
+    
+  
 }
 
 =head2 $fld->sql_data($sel, $sub)
@@ -492,21 +492,21 @@ relation.
 =cut
 
 sub sql_data {
-	my ($self, $sel, $sub)=@_;
-	# FIXME: Won't work if relation is second argument
-	# FIXME: Make sure this works for several levels, advanced selects, ...
+  my ($self, $sel, $sub)=@_;
+  # FIXME: Won't work if relation is second argument
+  # FIXME: Make sure this works for several levels, advanced selects, ...
 
-	$sel->add_tab($self->lnk_tab_name);
-	$sel->add_tab($self->to_tab_name);
-	$sel->add_fld($self->lnk_tab_name . "." . $self->from_field_name);
-	$sel->add_fld($self->lnk_tab_name . "." . $self->to_field_name);
-	$sel->add_fld($self->to_tab_name . "." . $sub->[0]); # !!
+  $sel->add_tab($self->lnk_tab_name);
+  $sel->add_tab($self->to_tab_name);
+  $sel->add_fld($self->lnk_tab_name . "." . $self->from_field_name);
+  $sel->add_fld($self->lnk_tab_name . "." . $self->to_field_name);
+  $sel->add_fld($self->to_tab_name . "." . $sub->[0]); # !!
 
-	return $self->lnk_tab_name . "." . $self->from_field_name .
-		     "=" . $self->tab->name . "." . $self->tab->id->name . 
-				 " AND " . $self->lnk_tab_name . "." . $self->to_field_name .
-				 "=" . $self->to_tab_name . "." .$self->to_tab->id->name . 
-				 " AND " .  $self->to_tab_name . "." . $sub->[0];
+  return $self->lnk_tab_name . "." . $self->from_field_name .
+         "=" . $self->tab->name . "." . $self->tab->id->name . 
+         " AND " . $self->lnk_tab_name . "." . $self->to_field_name .
+         "=" . $self->to_tab_name . "." .$self->to_tab->id->name . 
+         " AND " .  $self->to_tab_name . "." . $sub->[0];
 }
 
 =head2 $fld->field_name
@@ -519,16 +519,16 @@ DBIx::HTMLView::Fld.
 sub field_name{undef}
 
 sub sql_create {
-	my $self=shift;
+  my $self=shift;
 
-	$self->lnk_tab->sql_create;
-	undef;
+  $self->lnk_tab->sql_create;
+  undef;
 }
 
 =head2 $fld->view_fmt($fmt_name, $fmt)
 
 Will call view_fmt($fmt_name, $fmt) on the postset containing all 
-the posts this relation is pointing to and return the result, se 
+the posts this relation is pointing to and return the result, see 
 DBIx::HTMLView::PostSet for info on the $fmt format.
 
 If the fmt string starts with "<InRel>", the rest of the fmt will
@@ -539,39 +539,46 @@ will be replaced by the returnvalue of eval(...).
 =cut
 
 sub view_fmt {
-	my ($self, $fmt_name, $fmt)=@_;	
-	if (!defined $fmt) {$fmt=$self->fmt($fmt_name)}	
+  my ($self, $fmt_name, $fmt)=@_;  
+  if (!defined $fmt) {$fmt=$self->fmt($fmt_name)}  
 
-	if ($fmt =~ /^<InRel>(.*)$/i) {
-		$fmt=$1;
-		my $p=DBIx::HTMLView::Fmt->new;
-		return $p->parse_fmt($self, $fmt_name, $fmt);
-	} else {
-		return $self->post_set->view_fmt($fmt_name, $fmt);
-	}
+  if ($fmt =~ /^<InRel>(.*)$/i) {
+    $fmt=$1;
+    my $p=DBIx::HTMLView::Fmt->new;
+    return $p->parse_fmt($self, $fmt_name, $fmt);
+  } else {
+    return "No match!" if !defined($self->post);
+    return $self->post_set->view_fmt($fmt_name, $fmt);
+  }
 }
 
 sub default_fmt {
-	my ($self, $kind)=@_;
-	if (!defined $kind) {
-		if ($self->got_data('view')) { # For backwards compatibility
-			my $v=$self->data('view');
-			foreach ($self->to_tab->fld_names) {
-				$v =~ s/\$$_/<fld $_>/g;
-			}
-			my $res= '<node join="'.$self->join_str.'">'. $v;
-			$res.="</node>";
-			$self->{'data'}{'fmt'}=$res; #FIXME: Use an accessor method
-			return $res;
-		}
-	}
-	if ($kind eq 'edit_html') {
-		return '<InRel><perl>$self->view_fmt_edit_html("view_html")</perl>';
-	}
-	
-	return DBIx::HTMLView::Relation::default_fmt(@_)
+  my ($self, $kind)=@_;
+  if (!defined $kind) {
+    if ($self->got_data('view')) { # For backwards compatibility
+      my $v=$self->data('view');
+      foreach ($self->to_tab->fld_names) {
+        $v =~ s/\$$_/<fld $_>/g;
+      }
+      my $res= '<node join="'.$self->join_str.'">'. $v;
+      $res.="</node>";
+      $self->{'data'}{'fmt'}=$res; #FIXME: Use an accessor method
+      return $res;
+    }
+  }
+  if ($kind eq 'edit_html') {
+    return '<InRel><perl>$self->view_fmt_edit_html("view_html")</perl>';
+  }
+  
+  return DBIx::HTMLView::Relation::default_fmt(@_)
 }
 
 
 1;
 
+
+# Local Variables:
+# mode:              perl
+# tab-width:         8
+# perl-indent-level: 2
+# End:

@@ -1,7 +1,8 @@
 #!/usr/bin/perl
 
-#  CGIListView.pm - A List user interface for DBI databases
+#  CGIGermanListView.pm - A List user interface for DBI databases
 #  (c) Copyright 1999 Hakan Ardo <hakan@debian.org>
+#  (c) Copyright 2000 Konrad Riedel <k.riedel@gmx.de> 
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -19,11 +20,11 @@
 
 =head1 NAME
 
-  DBIx::HTMLView::CGIListView - A List user interface for DBI databases
+  DBIx::HTMLView::CGIGermanListView - A List user interface for DBI databases
 
 =head1 SYNOPSIS
 
-  $view=new DBIx::HTMLView::CGIReqEdit($script, $dbi, $cgi);
+  $view=new DBIx::HTMLView::CGIGermanListView($script, $dbi, $cgi);
   print $view->view_html;
 
 =head1 DESCRIPTION
@@ -45,7 +46,7 @@ This is a subclass to DBIx::HTMLView::CGIView.
 =head1 METHODS
 =cut
 
-package DBIx::HTMLView::CGIListView;
+package DBIx::HTMLView::CGIGermanListView;
 use strict;
 
 use vars qw(@ISA);
@@ -54,7 +55,7 @@ require DBIx::HTMLView::CGIView;
 
 sub new {
   my $self=DBIx::HTMLView::CGIView::new(@_);
-
+#pass rows via new HOWTO?
   $self->{'view_flds'}=undef;
   $self->{'extra_sql'}=undef;
   $self->{'page'}=1;
@@ -62,20 +63,9 @@ sub new {
   $self;
 }
 
-=head2 $view->rows($nr)
-
-Specifies how many rows should be displayed on one page. Default is 50.
-
-=cut
-
-sub rows {
-  my ($self, $rows)=@_;
-  $self->{'rows'}=$rows;
-}
-
 =head2 $view->flds_to_view(@flds)
 
-Specifies which flds to view by listing there names. Default is to view
+Specifys which flds to view by listing there names. Default is to view
 all fields of a post but none of the relations.
 
 =cut
@@ -131,85 +121,75 @@ sub view_html {
   my $script=$self->script_name;
   my $tab=$self->tab->name;
   my $res =  << "EOF";
-<h1>Current table: $tab</h1>
-
-<b>Change table</b>: 
+<table width="100%" border=0 cellspacing=1 cellpadding=2 bgcolor=#cccccc>
+ <tr align=center>
+ <td bgcolor=#cccccc
 EOF
-
-  #$res .= "<form method=POST action=\"$script\">";
-  my $data = $self->form_data;
-  $data =~ s/<input type=hidden name="_Table" value="[^\"]+">//;
-  $res.=$data;
 
   if (defined $self->{'restrict_tabs'}) {
     foreach (@{$self->{'restrict_tabs'}}) {
-      #$res .= '<input type=submit name=_Table value="' . $_ . '">';
-      $res .= "<a href=\"$script?_Table=$_&"
+      $res .= "<td><a href=\"$script?_Table=$_&"
         .$self->lnk.'">'.$_. '</a> ';
       $res .= '<a href="'.$script.'?_Table='.$_.
-      '&_Action=add&'.$self->lnk.'">+</a>, ';
+      '&_Action=add&'.$self->lnk.'">+</a></td> ';
     }
   } else {
     foreach ($self->db->tabs) {
-      #$res .= '<input type=submit name=_Table value="' . $_->name . '">';
-      $res .= "<a href=\"$script?_Table=".$_->name."&"
+      $res .= "<td><a href=\"$script?_Table=".$_->name.'&'
         .$self->lnk.'">'.$_->name. '</a> ';
       $res .= '<a href="'.$script.'?_Table='.$_->name.
-      '&_Action=add&'.$self->lnk.'">+</a>, ';
+      '&_Action=add&'.$self->lnk.'">+</a></td> ';
     }
   }
-  #$res .= '</form>';
+  $res .= '</tr></table>';
 
   my $cmd=$q->param('_Command');
   if (!defined $cmd) {$cmd=""}
-$res .= << "EOF";
-<p>
-<form method=POST action="$script">
-  <B>Search</b>: <input name="_Command" VALUE="$cmd">
-  <input type=hidden name="_Action"  value="search">
-  <input type=submit value="Search">
-EOF
-  $res .= $self->form_data . "</from><hr>";
-  
-  my $hits;
-  my $lst=undef;
-  my $order=$q->param('_Order');
-  # FIXME: combinde ORDER with previous extra_sql
-  $self->{'extra_sql'}="ORDER BY $order DESC" if defined $order; 
-  $self->{'page'}=$q->param('_Page')||1;
 
+  my $lst=undef;
+  my $p;
+  my $hits;
+  
   my $act=$q->param('_Action');
+  my $order=$q->param('_Order');
+  $self->{'extra_sql'}="ORDER BY $order DESC" if defined $order;
+  $self->{'page'}=$q->param('_Page')||1;
   if (defined $act && $act eq 'search') {
     $lst=$q->param('_Command');
   }  
   $hits=$self->db->tab($tab)->list($lst,$self->{'extra_sql'},
-                             $self->{'view_flds'});
+      $self->{'view_flds'});
   $hits->tab->set_viewer($self);
-  my $pages = int(($hits->rows-1)/$self->{'rows'})+1;
-  my $id_name = $self->tab->id->name;
+  my $pages = int($hits->rows/$self->{'rows'})+1;
+  $res.='<table width="100%" border=0 cellspacing=1 cellpadding=2>';
+  $res.="<tr><td colspan=2><h2> $tab (";
+  $res.=$self->{'page'}."/$pages)</h2>";
+  $res .= '<a href="'.$script.'?_Action=add&'.$self->lnk.'">Datensatz hinzufügen</a> </td>';
+  $res .= << "EOF";
+<td colspan=3>
+    <form method=POST action="$script">
+    <input name="_Command" VALUE="$cmd">
+    <input type=hidden name="_Action"  value="search">
+    <input type=submit value="Suchen">
+  <br>zBsp Name LIKE 'a%'
+EOF
 
+#use Data::Dumper; print Dumper($self)."<p>";
+  $res.=$self->form_data .'</form></td>'; 
+  $res.='</td></tr></table>';
   for (1..$pages) { 
-    if ($_ != $self->{'page'}) {
-      $res .= '<a href="'.$script.'?_Page='.$_;
-      $res .= "&_Action=search&_Command=".$self->cgi->escape($lst) if defined $lst; 
-      $res .=  '&'.$self->lnk."\">$_</a> ";
-    } else {
-      $res .= "$_ ";
-    }
+    $res .= '<a href="'.$script.'?_Page='.$_;
+    $res .= "&_Order=$order"if defined $order; 
+    $res .= "&_Action=search&_Command=".$self->cgi->escape($lst) if defined $lst; 
+    $res .=  '&'.$self->lnk."\">$_</a> ";
   }
-
+        my $id .= $self->db->tab($tab)->id->name;
   $res .= $hits->view_html(
-    '<a href="'.$script.'?_id=<fld '. $id_name .
-                           '>&_Action=show&'.$self->lnk.'">Show</a> '.
-    '<a href="'.$script.'?_id=<fld '. $id_name .
-                           '>&_Action=edit&'.$self->lnk.'">Edit</a> '.
-    '<a href="'.$script.'?_id=<fld '. $id_name .
-                           '>&_Action=delete&'.$self->lnk.'">Delete</a> ',
-                           $self->{'view_flds'},
-                           $self
-  );
+#'<a href="'.$script.'?_id=<fld id>&_Action=show&'.$self->lnk.'">Anz.</a> '.
+      '<a href="'.$script."?_id=<fld $id>&_Action=edit&".$self->lnk.'">Bearb.</a> '.
+      '<a href="'.$script."?_id=<fld $id>&_Action=delete&".$self->lnk.'">Löschen</a> ',
+      $self->{'view_flds'},$self);
 
-  $res .= '<a href="'.$script.'?_Action=add&'.$self->lnk.'">Add</a> ';
   $res;
 }
 

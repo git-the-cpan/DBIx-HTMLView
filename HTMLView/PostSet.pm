@@ -57,45 +57,49 @@ use Carp;
 =head2 $post_set=DBIx:.HTMLView::PostSet->new($tab, $sth, $save)
 
 Creates a new PostSet object for posts from the table $tab (a
-DBIx::HTMlView::Table object). If $sth is a refrenc it's supposed to
+DBIx::HTMlView::Table object). If $sth is a reference it's supposed to
 be the result of a DBI execute call with a select command. The posts
 returned from the db will be the ones represented by this set.
 
 If $save is defined to a false value the object will be created in
-no-save mode, otherview in save mode. Se the DESCRIPTION.
+no-save mode, otherview in save mode. See the DESCRIPTION.
 
 =cut
 
 sub new {
-	my $this = shift;
-	my $class = ref($this) || $this;
-	my $self=	bless {}, $class;
+  my $this = shift;
+  my $class = ref($this) || $this;
+  my $self=  bless {}, $class;
 
-	my ($tab, $sth, $save) = @_;
-	$self->{'next_post'}=0;
-	$self->{'tab'}=$tab;
+  my ($tab, $sth, $save) = @_;
+  $self->{'next_post'}=0;
+  $self->{'tab'}=$tab;
 
-	if (defined $save) {
-		$self->{'save'}=$save;
-	} else {
-		$self->{'save'}=1;
-	}
-	$self->{'sth'}=$sth;
+  if (defined $save) {
+    $self->{'save'}=$save;
+  } else {
+    $self->{'save'}=1;
+  }
+  $self->{'sth'}=$sth;
 
-	if (ref $sth) {
-		if ($self->save_mode) {
+  if (ref $sth) {
+    if ($self->save_mode) {
 # FIXME: Separate into a into_save_mode method and update Table::list docs.
-			while (my $ref = $sth->fetchrow_arrayref) {
-				my $post=$tab->new_post($ref,$sth);
-				if (!$self->got_post($post)) {
-					$self->do_got_post($post);
-					$self->add($post);
-				}
-			}
-		}
-	}
+      while (my $ref = $sth->fetchrow_arrayref) {
+        my $post=$tab->new_post($ref,$sth);
+        if ($post->got_id) {
+          if (!$self->got_post($post)) {
+            $self->do_got_post($post);
+            $self->add($post);
+          }
+        } else {
+          $self->add($post);
+        }
+      }
+    }
+  }
 
-	$self;
+  $self;
 }
 
 
@@ -112,7 +116,7 @@ sub rows {
 
 =head2 $post_set->got_post($post)
 
-Returns true if $post has been returned erlier in this set (in which
+Returns true if $post has been returned earlier in this set (in which
 case we won't return it again). Or if we are in save mode returns true
 if the post is within the set. $post should be a DBIx::HTMLView::Post
 object.
@@ -147,24 +151,29 @@ first one will be returned if this method has not been called before.
 =cut
 
 sub get_next {
-	my $self=shift;
-	$self->{'next_post'}++;
-	if ($self->save_mode) {
-		return $self->{'posts'}[$self->{'next_post'}-1];
-	} else {
-		my $ref;
-		if ($ref= $self->{'sth'}->fetchrow_arrayref) {
-			my $post=$self->tab->new_post($ref,$self->{'sth'});
-			if (!$self->got_post($post)) {
-				$self->do_got_post($post);
-				return $post;
-			} else {
-				return $self->get_next;
-			}
-		} else {
-			return undef;
-		}
-	}
+  my $self=shift;
+  $self->{'next_post'}++;
+
+  if ($self->save_mode) {
+    return $self->{'posts'}[$self->{'next_post'}-1];
+  } else {
+    my $ref;
+    if ($ref= $self->{'sth'}->fetchrow_arrayref) {
+      my $post=$self->tab->new_post($ref,$self->{'sth'});
+      if ($post->got_id) {
+        if (!$self->got_post($post)) {
+          $self->do_got_post($post);
+          return $post;
+        } else {
+          return $self->get_next;
+        }
+      } else {
+        return $post;
+      }
+    } else {
+      return undef;
+    }
+  }
 }
 
 =head2 $post_set->save_mode
@@ -182,9 +191,9 @@ Adds the post $post (a DBIx::HTMLView::Post object) to the set.
 =cut
 
 sub add {
-	my ($self, $post)=@_;
+  my ($self, $post)=@_;
 
-	push @{$self->{'posts'}}, $post;
+  push @{$self->{'posts'}}, $post;
 }
 
 =head2 $post_set->posts
@@ -196,10 +205,10 @@ with "No posts!" and "Not in save mode" respectivly.
 =cut
 
 sub posts {
-	my $self=shift;
-	croak "Not in save mode" if (!$self->save_mode);
-	croak "No posts!" if (!defined $self->{'posts'});
-	@{$self->{'posts'}};
+  my $self=shift;
+  croak "Not in save mode" if (!$self->save_mode);
+  croak "No posts!" if (!defined $self->{'posts'});
+  @{$self->{'posts'}};
 }
 
 =head2 $post_set->first
@@ -209,18 +218,18 @@ Returns the first post of this set, or dies with "No posts!" if there is no post
 =cut
 
 sub first {
-	my $self=shift;
-	if ($self->save_mode) {
-		my $p=$self->{'posts'}[0];
-		croak "No posts!" if (!defined $p);
-		$self->{'next_post'}=1;
-		return $p;
-	} else {
-		croak "Not in save mode" if ($self->{'next_post'} != 0);
-		my $p=$self->get_next;
-		croak "No posts!" if (!defined $p);		
-		return $p;
-	}
+  my $self=shift;
+  if ($self->save_mode) {
+    my $p=$self->{'posts'}[0];
+    croak "No posts!" if (!defined $p);
+    $self->{'next_post'}=1;
+    return $p;
+  } else {
+    croak "Not in save mode" if ($self->{'next_post'} != 0);
+    my $p=$self->get_next;
+    #croak "No posts!" if (!defined $p);    
+    return $p;
+  }
 }
 
 =head2 $post_set->view_html
@@ -233,8 +242,8 @@ html format.
 #FIXME: We here shourtcust the calls to tab->list_fmt in order to pass params to it, noot good...
 
 sub view_html {
-	my ($self,$butt,$flds)=@_;
-	$self->view_fmt("view_html", $self->tab->list_fmt("view_html",$butt,$flds));
+  my ($self,$butt,$flds,$viewer)=@_;
+  $self->view_fmt("view_html", $self->tab->list_fmt("view_html",$butt,$flds,$viewer),$viewer);
 }
 
 =head2 $post->view_fmt($fmt_name, $fmt)
@@ -244,7 +253,7 @@ $fmt_name. as returned by DBIx::HTMLView::list_fmt($fmt_name). If $fmt
 is specified it will be used as the fmt strings instead of looking up 
 a default one.
 
-If the fmt stringit contains a <node>...</node> contrsuct the ... part
+If the fmt stringit contains a <node>...</node> construct the ... part
 will be repeated once for every post and passed as $fmt param to 
 view_fmt of DBIx::HTMLView::Post. Curretly we only support one
 <node>...</node>  construct in the fmt. If ... is "", undef will
@@ -257,41 +266,59 @@ represented  even if you use a custom fmt passed to $fmt.
 =cut
 
 sub view_fmt {
-	my ($self, $fmt_name, $fmt)=@_;
-	my ($head, $node, $foot);
-	my $join=undef;
-	my $res;
-	my $p;
+  my ($self, $fmt_name, $fmt,$viewer)=@_;
+  my ($head, $node, $foot);
+  my $join=undef;
+  my $res;
+  my $p;
+  if (!defined $fmt) {$fmt=$self->tab->list_fmt($fmt_name)}
 
-	if (!defined $fmt) {$fmt=$self->tab->list_fmt($fmt_name)}
+  #FIXME: Use a real XML parser or some template package
+  while ($fmt =~ s/^(.*?)<sperl>(.*?)<\/sperl>/$1.eval($2)/geis) {}
+  if ($fmt =~ /^(.*?)<node\s*(.*?)>(.*)<\/node>(.*)$/s) {
+    $head=$1; $node=$3; $foot=$4;
+    if ($2 =~ /^join\s*=\s*[\"\']?(.*?)[\"\']?$/s) {$join=$1}
+    if ($node eq "") {$node=undef;}
+  } else {
+    return $fmt;
+  }
+  $res=$head;
 
-	#FIXME: Use a real XML parser or some template package
-#	while ($fmt =~ s/^(.*?)<perl>(.*?)<\/perl>/$1.eval($2)/geis) {}
-	if ($fmt =~ /^(.*?)<node\s*(.*?)>(.*)<\/node>(.*)$/s) {
-		$head=$1; $node=$3; $foot=$4;
-		if ($2 =~ /^join\s*=\s*[\"\']?(.*?)[\"\']?$/s) {$join=$1}
-		if ($node eq "") {$node=undef;}
-	} else {
-		return $fmt;
-	}
-	$res=$head;
-	my $t=eval {
-		$p=$self->first;
-	}; die unless ($t || $@ =~ /^(No posts!)/);
-	if ($t) {
-		$res.=$p->view_fmt($fmt_name, $node);
-		while (defined ($p=$self->get_next)) {
-			if (defined $join) {$res.=$join}
-#			print "hej\n";
-			$res.=$p->view_fmt($fmt_name, $node);
-		}
-	}
-	$res.=$foot;
-
-	$res;
+  #my $t=eval {
+  #  $p=$self->first;
+  #}; die unless ($t || $@ =~ /^(No posts!)/);
+  #if ($t) {
+  #$res.=$p->view_fmt($fmt_name, $node);
+  
+  my $last=undef;
+  if (defined($viewer)){
+    my $skip=($viewer->{'page'}-1)*$viewer->{'rows'};
+    if ($skip) {  
+      while (defined ($self->{'sth'}->fetch)) {
+        last if ($self->{'next_post'}++>=$skip-1);
+      } 
+    }
+    $last=$viewer->{'page'}*$viewer->{'rows'};
+  }
+  my $first=1;
+  while (defined ($p=$self->get_next)) {
+    last if (defined $last && $self->{'next_post'}>$last);
+    if (defined $join && !$first) {$res.=$join}
+    $res.=$p->view_fmt($fmt_name, $node);
+              $first=0;
+  }
+  $res.=$foot;
+  
+  $res;
 }
 
 sub view_text {shift->view_fmt('view_text')}
 
 1;
 
+
+# Local Variables:
+# mode:              perl
+# tab-width:         8
+# perl-indent-level: 2
+# End:

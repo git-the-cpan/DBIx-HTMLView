@@ -48,17 +48,23 @@ require DBIx::HTMLView::DB;
 @ISA = qw(DBIx::HTMLView::DB);
 
 sub insert {
-	my ($self, $tab, $post)=@_;
-	my $id=$self->send('select _seq from ' . $tab->name)->fetchrow_arrayref->[0];
-	$post->set($tab->id->name, $id);
+  my ($self, $tab, $post)=@_;
+  my $id=$self->send('select _seq from ' . $tab->name)->fetchrow_arrayref->[0];
+  $post->set($tab->id->name, $id);
 
-	DBIx::HTMLView::DB::insert($self, $tab, $post);
+  DBIx::HTMLView::DB::insert($self, $tab, $post);
 }
 
 sub sql_create_table {
-	my ($self, $table)=@_;
-	DBIx::HTMLView::DB::sql_create_table($self, $table);
- 	$self->send("CREATE UNIQUE  INDEX idx1 ON " . $table->name . "(" . 
-							$table->id->name . ")");
-	$self->send("CREATE SEQUENCE ON " . $table->name . " STEP 1");
+  my ($self, $table)=@_;
+  DBIx::HTMLView::DB::sql_create_table($self, $table);
+   $self->send("CREATE UNIQUE  INDEX idx1 ON " . $table->name . "(" . 
+              $table->id->name . ")");
+  $self->send("CREATE SEQUENCE ON " . $table->name . " STEP 1");
 }
+
+# Local Variables:
+# mode:              perl
+# tab-width:         8
+# perl-indent-level: 2
+# End:

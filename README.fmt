@@ -28,6 +28,12 @@ The <perl> tags can be place anywhere while the use of the others
 depend on what the fmt string is suposed to represent (eg Fld, Post or
 PostSet).
 
+For a simple example se the Test2.fmt file which will work together
+with the Test2 table from the set of test tabels used by test.pl. To
+view the content of the entire table, try:
+
+  Formated2.cgi?tab=Test2&fmt=Test2
+
 Fld level fmt-format
 -----------------------
 

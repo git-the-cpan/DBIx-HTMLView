@@ -57,14 +57,14 @@ the CGI object containing the request we got from the user.
 
 
 sub new {
-	my $this = shift;
-	my $class = ref($this) || $this;
-	my $self=       bless {}, $class;
+  my $this = shift;
+  my $class = ref($this) || $this;
+  my $self=       bless {}, $class;
 
-	my ($script, $db, $cgi)=@_;
+  my ($script, $db, $cgi)=@_;
   $self->{'script'}=$script;
-	$self->{'db'}=$db;
-	$self->{'cgi'}=$cgi;
+  $self->{'db'}=$db;
+  $self->{'cgi'}=$cgi;
   $self;
 }
 
@@ -96,13 +96,17 @@ the user name, and _pw, the password used to access the database.
 sub lnk {shift->link_data(@_)}
 sub link_data {
   my $self=shift;
-	my $ret="_Table=" . $self->tab->name;
+  my $ret="_Table=" . $self->tab->name;
 
-	if ($self->got_cgi && defined $self->cgi->param('_usr')) {
-		$ret.="&_usr=" . $self->cgi->param('_usr') . "&" . 
-			    "_pw=" . $self->cgi->param('_pw');
-	}
-	$ret;
+  if ($self->got_cgi) {
+    if (defined $self->cgi->param('_usr')) {
+      $ret.="&_usr=" . $self->cgi->param('_usr') . "&" . 
+	"_pw=" . $self->cgi->param('_pw');
+    }
+    $ret.="&_Page=" . $self->cgi->param('_Page') if defined  $self->cgi->param('_Page');
+    $ret.="&_Order=" . $self->cgi->param('_Order') if defined  $self->cgi->param('_Order');
+  }
+  $ret;
 }
 
 =head2 $view->form_data
@@ -115,11 +119,15 @@ type=hidden ...> tags to be included in a html form instead.
 sub form_data {
   my $self=shift;
   my $ret='<input type=hidden name="_Table" value="'.$self->tab->name.'">';
-	if ($self->got_cgi && defined $self->cgi->param('_usr')) {
-		$ret.='<input type=hidden name="_usr" value="'.$self->cgi->param('_usr').'">' . 
-			'<input type=hidden name="_pw" value="'.$self->cgi->param('_pw').'">';
-	} 
-	$ret;
+  if ($self->got_cgi) {
+    if (defined $self->cgi->param('_usr')) {
+      $ret.='<input type=hidden name="_usr" value="'.$self->cgi->param('_usr').'">' . 
+	'<input type=hidden name="_pw" value="'.$self->cgi->param('_pw').'">';
+    } 
+    $ret.='<input type=hidden name="_Page" value="'.$self->cgi->param('_Page').'">' if defined ($self->cgi->param('_Page'));
+    $ret.='<input type=hidden name="_Order" value="'.$self->cgi->param('_Order').'">' if defined ($self->cgi->param('_Order'));
+  }
+  $ret;
 }
 
 =head2 $view->db
@@ -168,15 +176,21 @@ found in the database if none was defined.
 =cut
 
 sub tab {
-	my $self=shift;
+  my $self=shift;
   my $tab=$self->cgi->param('_Table');
 
-	if (!defined $tab) {
+  if (!defined $tab) {
     my @t=$self->db->tabs();
     $tab=$t[0]->name;
     $self->cgi->param('_Table',$tab);
   }
-	$self->db->tab($tab);
+  $self->db->tab($tab);
 }
 
 1;
+
+# Local Variables:
+# mode:              perl
+# tab-width:         8
+# perl-indent-level: 2
+# End:

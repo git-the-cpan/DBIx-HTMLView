@@ -1,0 +1,4 @@
+This is a patch from Konrad Riedel <k.riedel@gmx.de> originaly for
+version 0.6.1 but here modified so that it whould work with ver
+0.7. It adds support for editable id's to the html editors , but
+breaks some of the data handling routeens (run make test for details).

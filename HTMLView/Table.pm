@@ -35,7 +35,7 @@ my $post=$table->get(7);
 
 This object is supposed to be created inside a database description as
 described in the DBIx::HTMLView::DB man page to represent a table and
-it's fields and relations. Then it's can be used to access the posts
+it's fields and relations. Then it can be used to access the posts
 of that table.
 
 =head1 METHODS
@@ -61,26 +61,26 @@ and relations of the table.
 =cut
 
 sub new {
-	my $this = shift;
-	my $class = ref($this) || $this;
-	my $self=	bless {}, $class;
+  my $this = shift;
+  my $class = ref($this) || $this;
+  my $self=  bless {}, $class;
 
-	my ($name, @flds) = @_;
-	$self->{'name'}=$name;
+  my ($name, @flds) = @_;
+  $self->{'name'}=$name;
 
-	foreach my $f (@flds) {
-		$f->set_table($self);
-		push @{$self->{'flds'}}, $f;
-		if ($f->isa('DBIx::HTMLView::Id')) {$self->{'id'}=$f}
-	}
-	if (!defined $self->{'id'}) {
-		my $fld=DBIx::HTMLView::Id('id');
-		$fld->set_table($self);
-		$self->{'id'}=$fld;
-		push @{$self->{'flds'}}, $fld;
-	}
+  foreach my $f (@flds) {
+    $f->set_table($self);
+    push @{$self->{'flds'}}, $f;
+    if ($f->isa('DBIx::HTMLView::Id')) {$self->{'id'}=$f}
+  }
+  if (!defined $self->{'id'}) {
+    my $fld=DBIx::HTMLView::Id('id');
+    $fld->set_table($self);
+    $self->{'id'}=$fld;
+    push @{$self->{'flds'}}, $fld;
+  }
 
-	$self;
+  $self;
 }
 
 =head2 $table->id
@@ -91,9 +91,9 @@ this table.
 =cut
 
 sub id {
-	my $self=shift;
-	confess "Id not defined!" if (!defined $self->{'id'});
-	$self->{'id'};
+  my $self=shift;
+  confess "Id not defined!" if (!defined $self->{'id'});
+  $self->{'id'};
 }
 
 =head2 $table->name
@@ -103,9 +103,9 @@ Returns the name of this table.
 =cut
 
 sub name {
-	my $self=shift;
-	die "Name not defined!" if (!defined $self->{'name'});
-	$self->{'name'};
+  my $self=shift;
+  die "Name not defined!" if (!defined $self->{'name'});
+  $self->{'name'};
 }
 
 =head2 $table->set_db($db)
@@ -116,8 +116,19 @@ which databse it belongs to ($db). It should not be used elsewhere.
 =cut
 
 sub set_db {
-	my ($self, $db)=@_;
-	$self->{'db'}=$db;
+  my ($self, $db)=@_;
+  $self->{'db'}=$db;
+}
+
+=head2 $table->set_viewer($db)
+
+To inform the table about ...
+To have links to the cgi script inside the table
+=cut
+
+sub set_viewer {
+  my ($self, $viewer)=@_;
+  $self->{'viewer'}=$viewer;
 }
 
 =head2 $table->list($search, $extra, $flds)
@@ -148,49 +159,116 @@ $post_set_save=DBIx::HTMLView::PostSet->new;
 while (defined $post=$self->get_next) {
   $post_set_save->add($post);
 }
-
+'
 
 =cut
 
 sub list {
-	my ($self, $search, $extra, $flds)=@_;
-	my $select;
+  my ($self, $search, $extra, $flds)=@_;
+  my $select;
 
-	if (defined $search) {
-		my $sel=DBIx::HTMLView::Selection->new($self,$search,$flds);
-		$select=$sel->sql_select;
-	} else {
-		my $fld='';
-		if (defined $flds) {
-			$fld=$self->id->name;
-			foreach (@$flds) {
-				my $n=$self->fld($_)->field_name;
-				if (defined $n){$fld.=", $n" ;}
-			}
-		} else {
-			$fld='*';
-		}
-		$select="select $fld from " . $self->name;
-	}
+  if (defined $search) {
+    my $sel=DBIx::HTMLView::Selection->new($self,$search,$flds);
+    $select=$sel->sql_select;
+  } else {
+    my $fld='';
+    if (defined $flds) {
+      $fld=$self->id->name;
+      foreach (@$flds) {
+        my $n=$self->fld($_)->field_name;
+        if (defined $n){$fld.=", $n" ;}
+      }
+    } else {
+      $fld='*';
+    }
+    $select="select $fld from " . $self->name;
+  }
 
-	if (defined $extra) {$select.=" " .$extra;}
-	$self->sql_list($select);
+  if (defined $extra) {$select.=" " .$extra;}
+  $self->sql_list($select);
 }
+
+=head2 $table->count($search, $extra)
+
+Counts the numbers of posts matching the $search string (see the 
+DBIx::HTMLView::Selection man page for a description of the search 
+language, it is close to SQL). $extra will be apended to the SQL 
+select command before it is sent to the databse.
+
+=cut
+
+sub count {
+  my ($self, $search, $extra)=@_;
+  my $select;
+  my $fld='*';
+
+  if (defined $search) {
+    my $sel=DBIx::HTMLView::Selection->new($self,$search,undef);
+    $select=$sel->sql_count;
+    $fld='*';
+  } else {
+    $select="select distinct count($fld) from " . $self->name;
+  }
+
+  if (defined $extra) {$select.=" " .$extra;}
+  return $self->sql_list($select)->get_next->fld("count($fld)")->val;
+}
+
+=head2 $table->noid_list($search, $extra, $flds)
+  
+Works in a similar way to $table->list, but it will not add the id
+field to flds select, and it will do a distinct select. The posts
+returned are some kind of pseudo posts. If you try to modify and update 
+them and the new posts will be added to the db as they have no id.
+
+Will currently not work with relations (FIXME). It will never work with 
+N2N relations as they require the id selected in order to find the 
+related posts.
+
+
+=cut
+
+sub noid_list {
+  my ($self, $search, $extra, $flds)=@_;
+  my $fld='';
+  my $select;
+
+  if (defined $flds) {
+    foreach (@$flds) {
+      my $n=$self->fld($_)->field_name;
+      if (defined $n){$fld.="$n, " ;}
+    }
+  } else {
+    $fld='*';
+  }
+  $fld =~ s/, $//g;
+
+  $select="select distinct $fld from " . $self->name;
+
+  if (defined $search) {
+    $select.=" where " . $search;
+  } 
+  if (defined $extra) {$select.=" " .$extra;}
+  $self->sql_list($select);
+}
+
 
 =head2 $table->sql_list($select)
 
 Sends $select, which should be a select clause on this table,to the 
 database and turns the result into a DBIx::HTMLView::PostSet object.
-You should use the list method insted. It gives you a smooter interface.
+You should use the list method insted. It gives you a smoother interface.
 
 =cut
 
-sub sql_list {			
-	my ($self, $select)=@_;
+sub sql_list {      
+  my ($self, $select)=@_;
 
- 	my $sth=$self->db->send($select);	
+#  print "sel=$select\n";
 
-	DBIx::HTMLView::PostSet->new($self, $sth,0);
+   my $sth=$self->db->send($select);  
+
+  DBIx::HTMLView::PostSet->new($self, $sth,0);
 }
 
 =head2 $table->new_post(...)
@@ -202,8 +280,8 @@ new method.
 =cut
 
 sub new_post {
-	my $self=shift;
-	DBIx::HTMLView::Post->new($self, @_);
+  my $self=shift;
+  DBIx::HTMLView::Post->new($self, @_);
 }
 
 =head2 $table->new_fld($fld,$val)
@@ -220,12 +298,12 @@ reference to an array of the id's of the posts being related to.
 =cut
 
 sub new_fld {
-	my ($self, $fld, $val)=@_;
-	if ($self->got_fld($fld)) {
-		return $self->fld($fld)->new($fld,$val,$self); 
-	} else {
-		return DBIx::HTMLView::Str->new($fld,$val,$self);
-	}
+  my ($self, $fld, $val)=@_;
+  if ($self->got_fld($fld)) {
+    return $self->fld($fld)->new($fld,$val,$self); 
+  } else {
+    return DBIx::HTMLView::Str->new($fld,$val,$self);
+  }
 }
 
 =head2 $table->fld_names
@@ -237,11 +315,11 @@ table.
 
 
 sub fld_names {
-	my $self=shift;
-	my @names;
-	die "No fealds found!" if (!defined $self->{'flds'});
-	foreach (@{$self->{'flds'}}) {push @names, $_->name;}
-	@names;
+  my $self=shift;
+  my @names;
+  die "No fields found!" if (!defined $self->{'flds'});
+  foreach (@{$self->{'flds'}}) {push @names, $_->name;}
+  @names;
 }
 
 =head2 $table->fld($fld)
@@ -252,12 +330,12 @@ $fld.
 =cut
 
 sub fld {
-	my ($self, $fld) =@_;
-	die "No fealds found!" if (!defined $self->{'flds'});
-	foreach (@{$self->{'flds'}}) {
-		if ($_->name eq $fld) {return $_;}
-	}
-	confess "Field not found: $fld";
+  my ($self, $fld) =@_;
+  die "No fields found!" if (!defined $self->{'flds'});
+  foreach (@{$self->{'flds'}}) {
+    if ($_->name eq $fld) {return $_;}
+  }
+  confess "Field not found: $fld";
 }
 
 =head2 $table->got_fld($fld)
@@ -267,12 +345,12 @@ Returns true if this table has a field or relation named $fld.
 =cut
 
 sub got_fld {
-	my ($self, $fld) =@_;
-	return 0 if (!defined $self->{'flds'});
-	foreach (@{$self->{'flds'}}) {
-		if ($_->name eq $fld) {return 1;}
-	}
-	return 0;
+  my ($self, $fld) =@_;
+  return 0 if (!defined $self->{'flds'});
+  foreach (@{$self->{'flds'}}) {
+    if ($_->name eq $fld) {return 1;}
+  }
+  return 0;
 }
 
 =head2 $table->fld($fld)
@@ -283,9 +361,9 @@ relations in this table.
 =cut
 
 sub flds {
-	my $self=shift;
-	die "No fealds found!" if (!defined $self->{'flds'});
-	@{$self->{'flds'}};
+  my $self=shift;
+  die "No fealds found!" if (!defined $self->{'flds'});
+  @{$self->{'flds'}};
 }
 
 =head2 $table->db
@@ -295,9 +373,21 @@ Returns the DBIx::HTMLView::DB object this table belongs to.
 =cut
 
 sub db {
-	my $self=shift;
-	die "No db defined!" if (!defined $self->{'db'});
-	$self->{'db'};
+  my $self=shift;
+  die "No db defined!" if (!defined $self->{'db'});
+  $self->{'db'};
+}
+
+=head2 $table->viewer
+
+Returns the DBIx::HTMLView::DB object this table belongs to.
+
+=cut
+
+sub viewer {
+  my $self=shift;
+  confess "No viewer defined!" if (!defined $self->{'viewer'});
+  $self->{'viewer'};
 }
 
 =head2 $table->del($id)
@@ -307,11 +397,11 @@ Deletes the post with id $id.
 =cut
 
 sub del {
-	my ($self, $id)=@_;
-	foreach ($self->flds) {
-		$_->del($id);
-	}
-	$self->db->del($self, $id);
+  my ($self, $id)=@_;
+  foreach ($self->flds) {
+    $_->del($id);
+  }
+  $self->db->del($self, $id);
 }
 
 =head2 $table->update($post)
@@ -325,8 +415,8 @@ DBIx::HTMLView::Post object) with the data contained in the object.
 
 sub update {shift->chnage(@_);}
 sub change {
-	my ($self, $post)=@_;
-	$self->db->update($self, $post);
+  my ($self, $post)=@_;
+  $self->db->update($self, $post);
 }
 
 =head2 $table->add($post)
@@ -339,8 +429,8 @@ database.
 
 sub add {shift->insert(@_);}
 sub insert {
-	my ($self, $post)=@_;
-	$self->db->insert($self, $post);
+  my ($self, $post)=@_;
+  $self->db->insert($self, $post);
 }
 
 =head2 $table->get($id)
@@ -362,8 +452,8 @@ Will create the tabel using SQL commands that works with msql.
 =cut
 
 sub sql_create {
-	my $self=shift;
-	$self->db->sql_create_table($self)
+  my $self=shift;
+  $self->db->sql_create_table($self)
 }
 
 =head2 $table->post_fmt($kind)
@@ -374,21 +464,21 @@ $kind format. It can be specified in ... FIXME: where?
 =cut
 
 sub post_fmt {
-	my ($self,$kind) =@_;
-	if (defined $kind && $kind eq 'view_text') {
-		my $res="";
-		foreach ($self->fld_names) {
-			$res.="$_: <fld $_>\n";
-		}
-		return $res;
-	} else {
-		my $res="<table>";
-		foreach my $fld ($self->fld_names) {
-			$res.="<tr><td valign=top><b>$fld</b></td><td><fld $fld></td></tr>\n";
-		}
-		$res.="</table>";
-		return $res;
-	}
+  my ($self,$kind) =@_;
+  if (defined $kind && $kind eq 'view_text') {
+    my $res="";
+    foreach ($self->fld_names) {
+      $res.="$_: <fld $_>\n";
+    }
+    return $res;
+  } else {
+    my $res="<table>";
+    foreach my $fld ($self->fld_names) {
+      $res.="<tr><td valign=top><b>$fld</b></td><td><fld $fld></td></tr>\n";
+    }
+    $res.="</table>";
+    return $res;
+  }
 }
 
 =head2 $table->list_fmt($kind, $butt, $flds)
@@ -405,37 +495,48 @@ of the rest. To for example contain the view, edit and delete buttons.
 =cut
 
 sub list_fmt {
-	my ($self, $kind, $butt, $flds) = @_;
-	if (defined $kind && $kind eq 'view_text') {
-		return "<node join=\"\n\"></node>";
-	} else {
-	  my $res="<table border=1>";
-  	my @flds;
-	
-	  if (defined $flds) {
-		  @flds=@$flds;
-  	} else {
-	  	@flds=$self->fld_names;
-  	}
+  my ($self, $kind, $butt, $flds,$viewer) = @_;
 
-	  $res.="<tr>";
-  	foreach (@flds) {
-	  	$res.="<th>" . $_ . "</th>";
-  	}
-	  $res.="</tr>";
+  if (defined $kind && $kind eq 'view_text') {
+    return "<node join=\"\n\"></node>";
+  } else {
+    my $res="<table border=1>";
+    my @flds;
+  
+    if (defined $flds) {
+      @flds=@$flds;
+    } else {
+      @flds=$self->fld_names;
+    }
 
-  	$res.="<node><tr>";
-	  foreach (@flds) {
-		  $res.="<td><fld " . $_ . "></td>";
-  	}
-	  if (defined $butt) {
-		  $res.="<td>$butt</td>";
-  	}
-	  $res.="</tr></node>";
+    $res.="<tr>";
+    foreach (@flds) {
+    if (defined($viewer)) {
+        $res.='<th><a href="'.$viewer->script_name."?_Order=$_&".$viewer->lnk."\">$_</a>"."</th>";
+    } else {
+        $res.="<th>$_</th>";
+    }
+    }
+    $res.="</tr>";
 
-  	$res.="</table>";
-	  return $res;
-	}
+    $res.="<node><tr>";
+    foreach (@flds) {
+      $res.="<td><fld " . $_ . "></td>";
+    }
+    if (defined $butt) {
+      $res.="<td>$butt</td>";
+    }
+    $res.="</tr></node>";
+
+    $res.="</table>";
+    return $res;
+  }
 }
 1;
 
+
+# Local Variables:
+# mode:              perl
+# tab-width:         8
+# perl-indent-level: 2
+# End:
