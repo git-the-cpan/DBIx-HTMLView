@@ -46,10 +46,11 @@ require DBIx::HTMLView::Field;
 
 sub name_vals {
 	my $self=shift;
-	({name=>$self->name, val=>"'" . $self->val . "'"});
+	({name=>$self->name, val=> $self->tab->db->sql_escape($self->val) });
 }
 
-sub sql_create {"CHAR(100)"}
+sub sql_create {my $self=shift;$self->db->sql_type("Str",$self)}
+
 
 
 1;

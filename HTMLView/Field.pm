@@ -37,7 +37,11 @@ are described below.
 It also contains default implementations of all the virtual methods
 except name_vals described in that man page. For viewing this means
 the value is used without any formating (both for text and html), and
-for the edit_html method a standard <input size=20 ...> tag is used.
+for the edit_html method a standard <input size=80 ...> tag is used.
+
+The size 80 can be changed by setting the edit_size key to the wanted 
+size in the $data hash passed to the new method, see 
+DBIx::HTMLView::Fld.
 
 =head1 METHODS
 =cut
@@ -56,6 +60,13 @@ Returns the value of this field if it's value is set. otherwise it
 dies with "Field conatins no data".
 
 =cut
+
+sub edit_size  {
+  my $self=shift;
+  if ($self->got_data('edit_size')) {return $self->data('edit_size')}
+  return 80;
+}
+
 
 sub val {
 	my $self=shift;
@@ -91,8 +102,17 @@ sub edit_html {
 	my $self=shift;
 	my $val="";
 
-	$val=$self->val if ($self->got_val);
-	'<input name="' . $self->name . '" value="'.$val.'" size=20>';
+ 	$val=$self->val if ($self->got_val);
+	'<input name="' . $self->name . '" value="'. js_escape($val) .'" size='.
+	$self->edit_size . '>';
+}
+
+# FIXME: Move this to a different module!
+# Escapes "'s
+sub js_escape {
+    my $str = shift;
+    $str =~ s/"/&quot;/g;
+    return $str;
 }
 
 sub sql_data {
@@ -106,5 +126,6 @@ sub del {}
 
 sub field_name{shift->name}
 
+sub post_updated{}
 1;
 

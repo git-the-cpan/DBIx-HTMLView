@@ -80,6 +80,7 @@ sub new {
 	} else {
 		$self->{'save'}=1;
 	}
+	$self->{'sth'}=$sth;
 
 	if (ref $sth) {
 		if ($self->save_mode) {
@@ -91,12 +92,22 @@ sub new {
 					$self->add($post);
 				}
 			}
-		} else {
-			$self->{'sth'}=$sth;
 		}
 	}
 
 	$self;
+}
+
+
+=head2 $post_set->rows
+
+Returns the number of rows (posts) in this PostSet as reported by the
+$sth->rows DBI function.
+
+=cut
+
+sub rows {
+    shift->{'sth'}->rows;
 }
 
 =head2 $post_set->got_post($post)
@@ -221,7 +232,7 @@ html format.
 
 sub view_html {
 	my ($self,$butt,$flds)=@_;
-	my $res="<table>";
+	my $res="<table border=1>";
 	my @fld;
 	my $t=2;
 	my $p;

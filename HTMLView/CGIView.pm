@@ -88,15 +88,21 @@ sub script_name {
 
 Returns a string that can be included in a link that will set the
 params that is supposed to be presistand between requests. Curent that
-is only one: _Table which is set to the name of the table we are
-currently working on.
+is: _Table, the name of the table we are currently working on, _usr, 
+the user name, and _pw, the password used to access the database.
 
 =cut
 
 sub lnk {shift->link_data(@_)}
 sub link_data {
   my $self=shift;
-  "_Table=" . $self->tab->name;
+	my $ret="_Table=" . $self->tab->name;
+
+	if ($self->got_cgi && defined $self->cgi->param('_usr')) {
+		$ret.="&_usr=" . $self->cgi->param('_usr') . "&" . 
+			    "_pw=" . $self->cgi->param('_pw');
+	}
+	$ret;
 }
 
 =head2 $view->form_data
@@ -108,7 +114,12 @@ type=hidden ...> tags to be included in a html form instead.
 
 sub form_data {
   my $self=shift;
-  '<input type=hidden name="_Table" value="'.$self->tab->name.'">';
+  my $ret='<input type=hidden name="_Table" value="'.$self->tab->name.'">';
+	if ($self->got_cgi && defined $self->cgi->param('_usr')) {
+		$ret.='<input type=hidden name="_usr" value="'.$self->cgi->param('_usr').'">' . 
+			'<input type=hidden name="_pw" value="'.$self->cgi->param('_pw').'">';
+	} 
+	$ret;
 }
 
 =head2 $view->db
@@ -134,6 +145,18 @@ sub cgi {
   my $self=shift;
   confess "No cgi defined!" if (!defined $self->{'cgi'});
   $self->{'cgi'};
+}
+
+=head2 $view->got_cgi
+
+Returns true if the CGI object was set by the $cgi parameter to the 
+constructor.
+
+=cut
+
+sub got_cgi {
+  my $self=shift;
+  defined $self->{'cgi'};
 }
 
 =head2 $view->tab

@@ -6,7 +6,22 @@ use DBIx::HTMLView;
 # specifikation of you database, while the second and the third is the
 # username and password.
 
-# If you have msql install setting up a local db for the test is
+# mySQL is the sugested database engine, using it the test script
+# takes less than half the time of what it needs using mSQL. mySQL can
+# be found at http://www.mysql.org/. To set up a test database using
+# an installed mysql server you simply:
+#
+#   mysqladmin create HTMLViewTester
+#
+# Then to make it accessable by everyone type:
+#
+#   mysql -e "insert into db values ('localhost','HTMLViewTester','','y'\
+#   ,'y','y','y','y','y','y','y','y','y')" mysql
+#
+# Now uncomment the top return line below specifying a mysql DBD, and
+# comment out the one below specifying msql.
+
+# If you have mSQL installed setting up a local db for the test is
 # simple. Just start msqlconfig, and the press the following keys:
 #
 #   D (Database configuration)
@@ -29,10 +44,17 @@ use DBIx::HTMLView;
 # scripts will use your local db instead of the central one.
 
 sub dbi {
-	return DB("DBI:mSQL:HTMLViewTester:hobbe.ub2.lu.se:1114", "", "", 
+	my ($usr, $pw)=@_;
+	return mysqlDB("DBI:mysql:HTMLViewTester", $usr, $pw, 
+#  return msqlDB("DBI:mSQL:HTMLViewTester:hobbe.ub2.lu.se:1114", "", "", 
 						Table('Test', Id('id'), Int('testf')),
 						Table('Test2', Id('id'), Str('str'), Int('nr'), 
-									N2N('Lnk',{tab=>'Test',view=>'$testf'}))
+									N2N('Lnk',{tab=>'Test',view=>'$testf'})),
+						Table('Test3', Id('id'), Bool('b1'), 
+									Bool('b2', {true=>1,false=>0,
+															view_true=>'Sure', view_false=>'No way'}),
+									Str('s', {edit_size=>20, sql_size=>20})
+								 )
 					 );
 }
 1;

@@ -58,14 +58,17 @@ diffrent packages man pages, eg DB is actualy the new method of
 DBIx::HTMLView::DB. Curently we have shourtcuts for the following
 objects: 
 
-  DB
+  msqlDB
+  mysqlDB
   Table
   Int
   Str
+  Bool
   Text
   Id
   N2N
   
+For backwards compatibility there is also a DB method calling msqlDB.
 
 =head1 METHODS
 =cut
@@ -75,22 +78,33 @@ package DBIx::HTMLView;
 use strict;
 use vars qw(@ISA $VERSION @EXPORT);
 
-$VERSION="0.4";
+$VERSION="0.5";
 
 require Exporter;
 require DBIx::HTMLView::DB;
+require DBIx::HTMLView::mysqlDB;
+require DBIx::HTMLView::msqlDB;
 require DBIx::HTMLView::Table;
 require DBIx::HTMLView::Int;
 require DBIx::HTMLView::Str;
+require DBIx::HTMLView::Bool;
 require DBIx::HTMLView::Text;
 require DBIx::HTMLView::Id;
 require DBIx::HTMLView::N2N;
 
 @ISA         = qw(Exporter);
-@EXPORT      = qw(DB Table Str Text Id N2N Int);
+@EXPORT      = qw(DB mysqlDB msqlDB Table Str Bool Text Id N2N Int);
 
 sub DB {
-	DBIx::HTMLView::DB->new(@_);
+  msqlDB(@_) # For backwards compatibility
+}
+
+sub mysqlDB {
+	DBIx::HTMLView::mysqlDB->new(@_);
+}
+
+sub msqlDB {
+	DBIx::HTMLView::msqlDB->new(@_);
 }
 
 sub Table {
@@ -103,6 +117,10 @@ sub Int {
 
 sub Str {
 	DBIx::HTMLView::Str->new(@_);
+}
+
+sub Bool {
+	DBIx::HTMLView::Bool->new(@_);
 }
 
 sub Text {

@@ -24,4 +24,4 @@ Write the tutorial an update the HTMLview.pm docs
 Move the QuickStart doc from the old distribution
 Move default/formated editors to edit_html in Post, PostSet, update README file
 Extende the Formated.cgi docs
-
+Combine all data getting subs in the Flds to one common

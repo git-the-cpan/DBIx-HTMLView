@@ -189,6 +189,7 @@ sub sql_list {
 	my ($self, $select)=@_;
 
  	my $sth=$self->db->send($select);	
+
 	DBIx::HTMLView::PostSet->new($self, $sth,0);
 }
 
@@ -362,21 +363,7 @@ Will create the tabel using SQL commands that works with msql.
 
 sub sql_create {
 	my $self=shift;
-	my $cmd="CREATE TABLE ".$self->name . "(";
-
-	foreach ($self->flds) {
-		my $type=$_->sql_create;
-		if (defined $type) {
-			$cmd .= $_->name . " " . $type . ", ";
-		}
-	}
-	$cmd =~ s/, $//;
-
-	$self->db->send($cmd.")");
-	# FIXME: msql specifik, move to db, update docs
-	$self->db->send("CREATE UNIQUE  INDEX idx1 ON " . $self->name . "(" . 
-									$self->id->name . ")");
-	$self->db->send("CREATE SEQUENCE ON " . $self->name . " STEP 1 VALUE 0");
+	$self->db->sql_create_table($self)
 }
 
 1;

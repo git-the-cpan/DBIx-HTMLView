@@ -33,11 +33,13 @@ my $hist=$dbi->tab('Test')->list();
 
 The DB object is usualy only used to represent the top level database
 and to access the diffrent tabel objects. But all databse
-communications is routed through it so if you'r databse is not acting
-in the same way as mSQL (which is the database engine I've tested it
-with) you could subclass this object and override the methods the
-needs to be changed. Actually almost all SQL commands are generated
-here too, it is only the SELECT clause that is generated elsewhere.
+communications is routed through it.
+
+This class is intended as a generic base class it is then inherited by
+engine specifik classes such as DBIx::HTMLView::msqlDB and
+DBIx::HTMLView::mysqlDB. If you plan to use this with another database
+engine you'll probably have to atleast overide the insert sub to
+handle the assignmet of id values to new posts correctly.
 
 =head1 METHODS
 =cut
@@ -96,7 +98,7 @@ sub DESTROY {
 
 =head2 $dbi->send($cmd)
 
-Vill prepare and send the SQL command $cmd to the database and it dies
+Will prepare and send the SQL command $cmd to the database and it dies
 on errors. The $sth is returned.
 
 =cut
@@ -140,6 +142,20 @@ sub tabs {
 	values %{$self->{'tabs'}};
 }
 
+=head2 $dbi->sql_escape
+
+Escapes the supplied string to be valid inside an SQL command.
+That is, it changes the string q[I'm a string] to q['I\'m a string'];
+
+=cut
+
+sub sql_escape {
+	my $self=shift;
+    my $str = shift;
+    $str =~ s/(['\\])/\\$1/g;
+    return "'$str'";
+}
+
 =head2 $dbi->del($tab, $id)
 
 Deletes the post with id $id form the table $tab (a DBIx::HTMLView::Table
@@ -168,32 +184,33 @@ sub update {
 	
 	foreach my $f ($post->fld_names) {
 		foreach ($post->fld($f)->name_vals) {
-			$cmd.= $_->{'name'} ."=".$_->{'val'} . ", ";
+			$cmd.= $_->{'name'} ."=". $_->{'val'} . ", ";
 		}
 	}
 	$cmd=~s/, $//;
 	$cmd.=" where " . $tab->id->name . "=" . $post->id; 
 	$self->send($cmd);
+
+	foreach my $f ($post->fld_names) {
+		$post->fld($f)->post_updated;
+	}
 }
 
 =head2 $dbi->insert($tab, $post)
 
-Insert the post $post (a DBIx::HTMLView::Post object)into the table
+Insert the post $post (a DBIx::HTMLView::Post object) into the table
 $tab (a DBIx::HTMLView::Table object). This is the method to override
 if you need to change the way new post get's there id numbers
-assigned. This implementation assumes there excists a mSQL sequence on
-the table $tab which is asked for the next number.
+assigned. This method should also make sure to set the id fld of $post
+to the id assigned to it.
 
 =cut
 
 sub insert {
 	my ($self, $tab, $post)=@_;
-	my $id=$self->send('select _seq from ' . $tab->name)->fetchrow_arrayref->[0];
 	my $values="";
 	my $names="";
 	my $cmd="insert into " . $tab->name;
-
-	$post->set($tab->id->name, $id);
 
 	foreach my $f ($post->fld_names) {
 		foreach ($post->fld($f)->name_vals) {
@@ -201,13 +218,17 @@ sub insert {
 			$values .= $_->{'val'} .", ";
 		}
 	}
-	$names =~ s/, $//;
+ 	$names =~ s/, $//;
 	$values =~ s/, $//;
 
 	$self->send($cmd . " ($names) VALUES ($values)");
+
+	foreach my $f ($post->fld_names) {
+		$post->fld($f)->post_updated;
+	}
 }
 
-=head2 $dbi->msql_create
+=head2 $dbi->sql_create
 
 Will create the tabels of the database using SQL commands that works
 with msql. The databse has to be created by hand using msqladmin or
@@ -221,5 +242,53 @@ sub sql_create {
 	foreach ($self->tabs) {
 		$_->sql_create;
 	}
+}
+
+=head2 $dbi->sql_create_table($table)
+
+Creates the table $table, a DBIx::HTMLView::Table object, using SQL 
+commands that works with msql.
+
+=cut
+
+sub sql_create_table {
+	my ($self, $table)=@_;
+	my $cmd="CREATE TABLE ".$table->name . "(";
+
+ 	foreach ($table->flds) {
+ 		my $type=$_->sql_create;
+ 		if (defined $type) {
+ 			$cmd .= $_->name . " " . $type . ", ";
+ 		}
+ 	}
+	$cmd =~ s/, $//;
+	$self->send($cmd.")");
+}
+
+=head2 $dbi->sql_type($type, $fld)
+
+Returns the SQL type string used for the type $type of the Fld $fld. $type 
+should be one of "Id", "Int", "Str", "Text", "Bool", and $fld should be a 
+DBIx::HTMLView::Fld object.
+
+=cut
+
+sub sql_type {
+	my ($self, $type, $fld)=@_;
+	my $t=lc($type);
+
+	if ($fld->got_data('sql_type')) {return $fld->data('sql_type')}
+
+	my $s="";
+	$s="(".$fld->data('sql_size').")" if ($fld->got_data('sql_size'));
+	
+
+	if ($t eq 'id') {return "INT$s"}
+	if ($t eq 'int') {return "INT$s"}
+	if ($t eq 'str') {if (!$s) {$s="(100)"} return "CHAR$s"}
+	if ($t eq 'text') {if (!$s) {$s="(500)"} return "CHAR$s"}
+	if ($t eq 'bool') {if (!$s) {$s="(1)"} return "CHAR$s"}
+
+	die "Bad type $t";
 }
 1;

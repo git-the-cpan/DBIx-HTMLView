@@ -7,7 +7,9 @@
 # created as one of the first things below.
 
 # Note the test here presumes id numbers are assigned in the order the
-# posts are added starting from 0
+# posts are added starting from 1
+
+# FIXME: This script presumptations "order by id" = insertion order
 
 BEGIN { $| = 1; print "Compilation 1..1\n"; }
 END {print "not ok 1\n" unless $loaded;}
@@ -40,6 +42,7 @@ print "reports if they do not exist, don't worry about that.\n";
 eval {$dbi->send("drop table Test");};
 eval {$dbi->send("drop table Test2");};
 eval {$dbi->send("drop table Test2_to_Test");};
+eval {$dbi->send("drop table Test3");};
 
 # The db in the SQL server is now empty, so let's create the tables
 $dbi->sql_create;
@@ -62,7 +65,7 @@ test($v->view_html eq '<h1>Current table: Test</h1>
   <B>Search</b>: <input name="_Command" VALUE="">
 	<input type=hidden name="_Action"  value="search">
   <input type=submit value="Search">
-<input type=hidden name="_Table" value="Test"></from><hr><table><p><i>Empty</i></p><a href="View.cgi?_Action=add&_Table=Test">Add</a> ');
+<input type=hidden name="_Table" value="Test"></from><hr><table border=1><p><i>Empty</i></p><a href="View.cgi?_Action=add&_Table=Test">Add</a> ');
 
 print "\nBasic database functions\n";
 $test_cnt=0;
@@ -71,57 +74,94 @@ $test_cnt=0;
 my $post=$dbi->tab('Test')->new_post;
 $post->set('testf', 6);
 $post->update;
+$id1=$post->id;
 
 # List the contents of the database
 my $tab=$dbi->tab('Test');
 my $hits=$tab->list();
-test($hits->view_text eq "id: 0\ntestf: 6\n\n");
+test($hits->rows == 1);
+test($hits->view_text eq "id: $id1\ntestf: 6\n\n");
 
 # Change the value of testf to 7
 $post->set('testf', 7);
 $post->update;
 
 # List the contents of the database
-test($tab->list()->view_text eq "id: 0\ntestf: 7\n\n");
+test($tab->list()->view_text eq "id: $id1\ntestf: 7\n\n");
 
 # Add two more post to have something more to test with 
 $post=$dbi->tab('Test')->new_post;
 $post->set('testf', 42);
 $post->update;
+$id2=$post->id;
 
 $post=$dbi->tab('Test')->new_post;
 $post->set('testf', 13);
 $post->update;
+$id3=$post->id;
 
 
 # List the contents of the database sorted by the id field
 $hits=$tab->list(undef,"order by id");
-test($hits->view_text eq "id: 0\ntestf: 7\n\nid: 1\ntestf: 42\n\nid: 2\ntestf: 13\n\n");
+test($hits->view_text eq "id: $id1\ntestf: 7\n\nid: $id2\ntestf: 42\n\nid: $id3\ntestf: 13\n\n");
+test($hits->rows == 3);
 
 # List the contents of the database sorted by the id field view in html
 $hits=$tab->list(undef,"order by id");
-test ($hits->view_html eq '<table><tr><th>id</th><th>testf</th></tr><tr><td>0</td><td>7</td></tr><tr><td>1</td><td>42</td></tr><tr><td>2</td><td>13</td></tr></table>');
+test ($hits->view_html eq "<table border=1><tr><th>id</th><th>testf</th></tr><tr><td>$id1</td><td>7</td></tr><tr><td>$id2</td><td>42</td></tr><tr><td>$id3</td><td>13</td></tr></table>");
 
 # List all posts where the testf field is greater than 8 sorted by id
 $hits=$tab->list("testf>8","order by id");
-test($hits->view_text eq "id: 1\ntestf: 42\n\nid: 2\ntestf: 13\n\n");
+test($hits->view_text eq "id: $id2\ntestf: 42\n\nid: $id3\ntestf: 13\n\n");
 
 # List all posts where the testf field is greater than 8 sorted by testf
 $hits=$tab->list("testf>8", "order by testf");
-test($hits->view_text eq "id: 2\ntestf: 13\n\nid: 1\ntestf: 42\n\n");
+test($hits->view_text eq "id: $id3\ntestf: 13\n\nid: $id2\ntestf: 42\n\n");
 
 
 # Delete a post
-$tab->del(2);
+$tab->del($id3);
 
 # List the table to check the result
 $hits=$tab->list(undef,"order by id");
-test($hits->view_text eq "id: 0\ntestf: 7\n\nid: 1\ntestf: 42\n\n");
+test($hits->view_text eq "id: $id1\ntestf: 7\n\nid: $id2\ntestf: 42\n\n");
 
-# Readd post for future test (now with new id)
+# Readd post for future test 
 $post=$dbi->tab('Test')->new_post;
 $post->set('testf', 13);
 $post->update;
+$id4=$post->id;
+
+# Add some postst to the Test3 table
+$post=$dbi->tab('Test3')->new_post;
+$post->set('b1', 'Y');
+$post->set('b2', '1');
+$post->set('s', 'hej');
+$post->update;
+$id31=$post->id;
+
+$post=$dbi->tab('Test3')->new_post;
+$post->set('b1', 'N');
+$post->set('b2', '0');
+$post->update;
+$id32=$post->id;
+
+$post=$dbi->tab('Test3')->new_post;
+$post->set('b1', 'Y');
+$post->set('b2', '0');
+$post->set('s', 'hopp');
+$post->update;
+$id33=$post->id;
+
+# List the table to check the result
+test($dbi->tab('Test3')->list(undef,"order by id")->view_text eq
+		 "id: $id31\nb1: Yes\nb2: Sure\ns: hej\n\n".
+     "id: $id32\nb1: No\nb2: No way\ns: \n\n".
+		 "id: $id33\nb1: Yes\nb2: No way\ns: hopp\n\n");
+
+
+test($dbi->tab('Test3')->list(undef,"order by id")->view_html eq 
+		 "<table border=1><tr><th>id</th><th>b1</th><th>b2</th><th>s</th></tr><tr><td>$id31</td><td>Yes</td><td>Sure</td><td>hej</td></tr><tr><td>$id32</td><td>No</td><td>No way</td><td></td></tr><tr><td>$id33</td><td>Yes</td><td>No way</td><td>hopp</td></tr></table>");
 
 print "\nRelations\n";
 $test_cnt=0;
@@ -130,54 +170,57 @@ $test_cnt=0;
 my $tab2=$dbi->tab('Test2');
 my $post1=$tab2->new_post;
 $post1->set('str', 'A test post');
-$post1->set('Lnk', [0,1]);
+$post1->set('Lnk', [$id1,$id2]);
 $post1->update;
+$id21=$post1->id;
 
 # List table to check result
 test($tab2->list->view_text eq 
-		 "id: 0\nstr: A test post\nnr: \nLnk: 7, 42\n\n");
+		 "id: $id21\nstr: A test post\nnr: \nLnk: 7, 42\n\n");
 
 # Add a post to Test2 related to 13 and 42 in Test
 my $post2=$tab2->new_post;
 $post2->set('str', 'Another test post');
-$post2->set('Lnk', [1,3]);
+$post2->set('Lnk', [$id2,$id4]);
 $post2->update;
+$id22=$post2->id;
 
 # List table to check result
 test($tab2->list(undef, "order by id")->view_text eq 
-		 "id: 0\nstr: A test post\nnr: \nLnk: 7, 42\n\n".
-		 "id: 1\nstr: Another test post\nnr: \nLnk: 42, 13\n\n");
+		 "id: $id21\nstr: A test post\nnr: \nLnk: 7, 42\n\n".
+		 "id: $id22\nstr: Another test post\nnr: \nLnk: 42, 13\n\n");
 
 # Add a post to Test2 with no relations
 my $post3=$tab2->new_post;
 $post3->set('nr', 7);
 $post3->update;
+$id23=$post3->id;
 
 # List table to check result
 test($tab2->list(undef, "order by id")->view_text eq 
-		 "id: 0\nstr: A test post\nnr: \nLnk: 7, 42\n\n".
-		 "id: 1\nstr: Another test post\nnr: \nLnk: 42, 13\n\n".
-		 "id: 2\nstr: \nnr: 7\nLnk: \n\n");
+		 "id: $id21\nstr: A test post\nnr: \nLnk: 7, 42\n\n".
+		 "id: $id22\nstr: Another test post\nnr: \nLnk: 42, 13\n\n".
+		 "id: $id23\nstr: \nnr: 7\nLnk: \n\n");
 
 # Update post 1 to only be related to 7
-$post1->set('Lnk', [0]);
+$post1->set('Lnk', [$id1]);
 $post1->update;
 
 # List table to check result
 test($tab2->list(undef, "order by id")->view_text eq 
-		 "id: 0\nstr: A test post\nnr: \nLnk: 7\n\n".
-		 "id: 1\nstr: Another test post\nnr: \nLnk: 42, 13\n\n".
-		 "id: 2\nstr: \nnr: 7\nLnk: \n\n");
+		 "id: $id21\nstr: A test post\nnr: \nLnk: 7\n\n".
+		 "id: $id22\nstr: Another test post\nnr: \nLnk: 42, 13\n\n".
+		 "id: $id23\nstr: \nnr: 7\nLnk: \n\n");
 
 # Update post 3 to only be related to 7, 13, 42
-$post3->set('Lnk', [0,1,3]);
+$post3->set('Lnk', [$id1,$id2,$id4]);
 $post3->update;
 
 # List table to check result
 test($tab2->list(undef, "order by id")->view_text eq 
-		 "id: 0\nstr: A test post\nnr: \nLnk: 7\n\n".
-		 "id: 1\nstr: Another test post\nnr: \nLnk: 42, 13\n\n".
-		 "id: 2\nstr: \nnr: 7\nLnk: 7, 42, 13\n\n");
+		 "id: $id21\nstr: A test post\nnr: \nLnk: 7\n\n".
+		 "id: $id22\nstr: Another test post\nnr: \nLnk: 42, 13\n\n".
+		 "id: $id23\nstr: \nnr: 7\nLnk: 7, 42, 13\n\n");
 
 # Update post 2 to have no relations
 $post2->set('Lnk', []);
@@ -185,43 +228,44 @@ $post2->update;
 
 # List table to check result
 test($tab2->list(undef, "order by id")->view_text eq 
-		 "id: 0\nstr: A test post\nnr: \nLnk: 7\n\n".
-		 "id: 1\nstr: Another test post\nnr: \nLnk: \n\n".
-		 "id: 2\nstr: \nnr: 7\nLnk: 7, 42, 13\n\n");
+		 "id: $id21\nstr: A test post\nnr: \nLnk: 7\n\n".
+		 "id: $id22\nstr: Another test post\nnr: \nLnk: \n\n".
+		 "id: $id23\nstr: \nnr: 7\nLnk: 7, 42, 13\n\n");
 
 print "\nCGIView interface tests\n";
 $test_cnt=0;
 
-# Bring up the CGIReqEdit editor with the post with id 0
+# Bring up the CGIReqEdit editor with the post with id 1
 require DBIx::HTMLView::CGIReqEdit;
-$post=$dbi->tab("Test")->get(0);
+$post=$dbi->tab("Test")->get($id1);
 $v=new DBIx::HTMLView::CGIReqEdit("View.cgi", $post);
 my $html=$v->view_html;
-test($html eq '<form method=POST action=View.cgi><dl><input type=hidden name=_Action value=update><table><tr><td valign=top><b>id </b></td><td>0<input type=hidden name="id" value="0"></td></tr><tr><td valign=top><b>testf </b></td><td><input name="testf" value="7" size=20></td></tr></table><input type=hidden name="_Table" value="Test"></dl><input type=submit value=OK></from>');
+test($html eq "<form method=POST action=View.cgi><dl><input type=hidden name=_Action value=update><table><tr><td valign=top><b>id </b></td><td>$id1<input type=hidden name=\"id\" value=\"$id1\"></td></tr><tr><td valign=top><b>testf </b></td><td><input name=\"testf\" value=\"7\" size=80></td></tr></table><input type=hidden name=\"_Table\" value=\"Test\"></dl><input type=submit value=OK></from>");
 
 # Fake a CGI response changing the testf field to 8
-my $q=new CGI({'id'=>0, 'testf'=>8, '_Table'=>'Test', '_Action'=>'update'});
+my $q=new CGI({'id'=>$id1, 'testf'=>8, '_Table'=>'Test', '_Action'=>'update'});
 $post=$dbi->tab($q->param('_Table'))->new_post($q);
 $post->update;
 
 # List the table to check the result
 $hits=$tab->list(undef,"order by id");
-test($hits->view_text eq "id: 0\ntestf: 8\n\nid: 1\ntestf: 42\n\nid: 3\ntestf: 13\n\n");
+test($hits->view_text eq "id: $id1\ntestf: 8\n\nid: $id2\ntestf: 42\n\nid: $id4\ntestf: 13\n\n");
 
 # Bring up the CGIReqEdit editor with the post with a blank post
 $post=$dbi->tab("Test")->new_post();
 $v=new DBIx::HTMLView::CGIReqEdit("View.cgi", $post);	
 $html=$v->view_html;
-test($html eq '<form method=POST action=View.cgi><dl><input type=hidden name=_Action value=update><table><tr><td valign=top><b>id </b></td><td></td></tr><tr><td valign=top><b>testf </b></td><td><input name="testf" value="" size=20></td></tr></table><input type=hidden name="_Table" value="Test"></dl><input type=submit value=OK></from>');
+test($html eq '<form method=POST action=View.cgi><dl><input type=hidden name=_Action value=update><table><tr><td valign=top><b>id </b></td><td></td></tr><tr><td valign=top><b>testf </b></td><td><input name="testf" value="" size=80></td></tr></table><input type=hidden name="_Table" value="Test"></dl><input type=submit value=OK></from>');
 
 # Fake a CGI response adding a new post with testf 77
 $q=new CGI({'testf'=>77, '_Table'=>'Test', '_Action'=>'update'});
 $post=$dbi->tab($q->param('_Table'))->new_post($q);
 $post->update;
+$id5=$post->id;
 
 # List the table to check the result
 $hits=$tab->list(undef,"order by id");
-test($hits->view_text eq "id: 0\ntestf: 8\n\nid: 1\ntestf: 42\n\nid: 3\ntestf: 13\n\nid: 4\ntestf: 77\n\n");
+test($hits->view_text eq "id: $id1\ntestf: 8\n\nid: $id2\ntestf: 42\n\nid: $id4\ntestf: 13\n\nid: $id5\ntestf: 77\n\n");
                           
 
 # Generate the ListView's default page
@@ -229,122 +273,128 @@ use CGI;
 my $v=new DBIx::HTMLView::CGIListView("View.cgi", $dbi, new CGI({}));
 $v->extra_sql("order by id"); # Sort by id to simplify check
 $v->restrict_tabs(['Test']);   # Show only one Table, to simplify check
-test($v->view_html eq '<h1>Current table: Test</h1>
+test($v->view_html eq "<h1>Current table: Test</h1>
 
 <b>Change table</b>: 
-<form method=POST action="View.cgi"><input type=submit name=_Table value="Test"></form><p>
-<form method=POST action="View.cgi">
-  <B>Search</b>: <input name="_Command" VALUE="">
-	<input type=hidden name="_Action"  value="search">
-  <input type=submit value="Search">
-<input type=hidden name="_Table" value="Test"></from><hr><table><tr><th>id</th><th>testf</th></tr><tr><td>0</td><td>8</td><td><a href="View.cgi?_id=0&_Action=show&_Table=Test">Show</a> <a href="View.cgi?_id=0&_Action=edit&_Table=Test">Edit</a> <a href="View.cgi?_id=0&_Action=delete&_Table=Test">Delete</a> </td></tr><tr><td>1</td><td>42</td><td><a href="View.cgi?_id=1&_Action=show&_Table=Test">Show</a> <a href="View.cgi?_id=1&_Action=edit&_Table=Test">Edit</a> <a href="View.cgi?_id=1&_Action=delete&_Table=Test">Delete</a> </td></tr><tr><td>3</td><td>13</td><td><a href="View.cgi?_id=3&_Action=show&_Table=Test">Show</a> <a href="View.cgi?_id=3&_Action=edit&_Table=Test">Edit</a> <a href="View.cgi?_id=3&_Action=delete&_Table=Test">Delete</a> </td></tr><tr><td>4</td><td>77</td><td><a href="View.cgi?_id=4&_Action=show&_Table=Test">Show</a> <a href="View.cgi?_id=4&_Action=edit&_Table=Test">Edit</a> <a href="View.cgi?_id=4&_Action=delete&_Table=Test">Delete</a> </td></tr></table><a href="View.cgi?_Action=add&_Table=Test">Add</a> ');
+<form method=POST action=\"View.cgi\"><input type=submit name=_Table value=\"Test\"></form><p>
+<form method=POST action=\"View.cgi\">
+  <B>Search</b>: <input name=\"_Command\" VALUE=\"\">
+	<input type=hidden name=\"_Action\"  value=\"search\">
+  <input type=submit value=\"Search\">
+<input type=hidden name=\"_Table\" value=\"Test\"></from><hr><table border=1><tr><th>id</th><th>testf</th></tr><tr><td>$id1</td><td>8</td><td><a href=\"View.cgi?_id=$id1&_Action=show&_Table=Test\">Show</a> <a href=\"View.cgi?_id=$id1&_Action=edit&_Table=Test\">Edit</a> <a href=\"View.cgi?_id=$id1&_Action=delete&_Table=Test\">Delete</a> </td></tr><tr><td>$id2</td><td>42</td><td><a href=\"View.cgi?_id=$id2&_Action=show&_Table=Test\">Show</a> <a href=\"View.cgi?_id=$id2&_Action=edit&_Table=Test\">Edit</a> <a href=\"View.cgi?_id=$id2&_Action=delete&_Table=Test\">Delete</a> </td></tr><tr><td>$id4</td><td>13</td><td><a href=\"View.cgi?_id=$id4&_Action=show&_Table=Test\">Show</a> <a href=\"View.cgi?_id=$id4&_Action=edit&_Table=Test\">Edit</a> <a href=\"View.cgi?_id=$id4&_Action=delete&_Table=Test\">Delete</a> </td></tr><tr><td>$id5</td><td>77</td><td><a href=\"View.cgi?_id=$id5&_Action=show&_Table=Test\">Show</a> <a href=\"View.cgi?_id=$id5&_Action=edit&_Table=Test\">Edit</a> <a href=\"View.cgi?_id=$id5&_Action=delete&_Table=Test\">Delete</a> </td></tr></table><a href=\"View.cgi?_Action=add&_Table=Test\">Add</a> ");
 
 # Generate the ListView's page on Test2
 $v=new DBIx::HTMLView::CGIListView("View.cgi", $dbi, 
 																	 new CGI({'_Table'=>'Test2'}));
 $v->extra_sql("order by id"); # Sort by id to simplify check
 $v->restrict_tabs(['Test2']);   # Show only one Table, to simplify check
-test ($v->view_html eq '<h1>Current table: Test2</h1>
+test ($v->view_html eq "<h1>Current table: Test2</h1>
 
 <b>Change table</b>: 
-<form method=POST action="View.cgi"><input type=submit name=_Table value="Test2"></form><p>
-<form method=POST action="View.cgi">
-  <B>Search</b>: <input name="_Command" VALUE="">
-	<input type=hidden name="_Action"  value="search">
-  <input type=submit value="Search">
-<input type=hidden name="_Table" value="Test2"></from><hr><table><tr><th>id</th><th>str</th><th>nr</th><th>Lnk</th></tr><tr><td>0</td><td>A test post</td><td></td><td>8</td><td><a href="View.cgi?_id=0&_Action=show&_Table=Test2">Show</a> <a href="View.cgi?_id=0&_Action=edit&_Table=Test2">Edit</a> <a href="View.cgi?_id=0&_Action=delete&_Table=Test2">Delete</a> </td></tr><tr><td>1</td><td>Another test post</td><td></td><td></td><td><a href="View.cgi?_id=1&_Action=show&_Table=Test2">Show</a> <a href="View.cgi?_id=1&_Action=edit&_Table=Test2">Edit</a> <a href="View.cgi?_id=1&_Action=delete&_Table=Test2">Delete</a> </td></tr><tr><td>2</td><td></td><td>7</td><td>8, 42, 13</td><td><a href="View.cgi?_id=2&_Action=show&_Table=Test2">Show</a> <a href="View.cgi?_id=2&_Action=edit&_Table=Test2">Edit</a> <a href="View.cgi?_id=2&_Action=delete&_Table=Test2">Delete</a> </td></tr></table><a href="View.cgi?_Action=add&_Table=Test2">Add</a> ');
+<form method=POST action=\"View.cgi\"><input type=submit name=_Table value=\"Test2\"></form><p>
+<form method=POST action=\"View.cgi\">
+  <B>Search</b>: <input name=\"_Command\" VALUE=\"\">
+	<input type=hidden name=\"_Action\"  value=\"search\">
+  <input type=submit value=\"Search\">
+<input type=hidden name=\"_Table\" value=\"Test2\"></from><hr><table border=1><tr><th>id</th><th>str</th><th>nr</th><th>Lnk</th></tr><tr><td>$id21</td><td>A test post</td><td></td><td>8</td><td><a href=\"View.cgi?_id=$id21&_Action=show&_Table=Test2\">Show</a> <a href=\"View.cgi?_id=$id21&_Action=edit&_Table=Test2\">Edit</a> <a href=\"View.cgi?_id=$id21&_Action=delete&_Table=Test2\">Delete</a> </td></tr><tr><td>$id22</td><td>Another test post</td><td></td><td></td><td><a href=\"View.cgi?_id=$id22&_Action=show&_Table=Test2\">Show</a> <a href=\"View.cgi?_id=$id22&_Action=edit&_Table=Test2\">Edit</a> <a href=\"View.cgi?_id=$id22&_Action=delete&_Table=Test2\">Delete</a> </td></tr><tr><td>$id23</td><td></td><td>7</td><td>8, 42, 13</td><td><a href=\"View.cgi?_id=$id23&_Action=show&_Table=Test2\">Show</a> <a href=\"View.cgi?_id=$id23&_Action=edit&_Table=Test2\">Edit</a> <a href=\"View.cgi?_id=$id23&_Action=delete&_Table=Test2\">Delete</a> </td></tr></table><a href=\"View.cgi?_Action=add&_Table=Test2\">Add</a> ");
 
-
-# Bring up the CGIReqEdit editor with the post with id 0
-require DBIx::HTMLView::CGIReqEdit;
-$post=$tab2->get(0);
-$v=new DBIx::HTMLView::CGIReqEdit("View.cgi", $post);
-test ($v->view_html eq '<form method=POST action=View.cgi><dl><input type=hidden name=_Action value=update><table><tr><td valign=top><b>id </b></td><td>0<input type=hidden name="id" value="0"></td></tr><tr><td valign=top><b>str </b></td><td><input name="str" value="A test post" size=20></td></tr><tr><td valign=top><b>nr </b></td><td><input name="nr" value="" size=20></td></tr><tr><td valign=top><b>Lnk </b></td><td><input type=checkbox name="Lnk" value=0 checked> 8<br><input type=checkbox name="Lnk" value=1 > 42<br><input type=checkbox name="Lnk" value=3 > 13<br><input type=checkbox name="Lnk" value=4 > 77<br><input type=hidden name="Lnk" value=do_edit></td></tr></table><input type=hidden name="_Table" value="Test2"></dl><input type=submit value=OK></from>');
 
 # Bring up the CGIReqEdit editor with the post with id 1
 require DBIx::HTMLView::CGIReqEdit;
-$post=$tab2->get(1);
+$post=$tab2->get($id21);
 $v=new DBIx::HTMLView::CGIReqEdit("View.cgi", $post);
-test ($v->view_html eq '<form method=POST action=View.cgi><dl><input type=hidden name=_Action value=update><table><tr><td valign=top><b>id </b></td><td>1<input type=hidden name="id" value="1"></td></tr><tr><td valign=top><b>str </b></td><td><input name="str" value="Another test post" size=20></td></tr><tr><td valign=top><b>nr </b></td><td><input name="nr" value="" size=20></td></tr><tr><td valign=top><b>Lnk </b></td><td><input type=checkbox name="Lnk" value=0 > 8<br><input type=checkbox name="Lnk" value=1 > 42<br><input type=checkbox name="Lnk" value=3 > 13<br><input type=checkbox name="Lnk" value=4 > 77<br><input type=hidden name="Lnk" value=do_edit></td></tr></table><input type=hidden name="_Table" value="Test2"></dl><input type=submit value=OK></from>');
+
+test ($v->view_html eq "<form method=POST action=View.cgi><dl><input type=hidden name=_Action value=update><table><tr><td valign=top><b>id </b></td><td>$id21<input type=hidden name=\"id\" value=\"$id21\"></td></tr><tr><td valign=top><b>str </b></td><td><input name=\"str\" value=\"A test post\" size=80></td></tr><tr><td valign=top><b>nr </b></td><td><input name=\"nr\" value=\"\" size=80></td></tr><tr><td valign=top><b>Lnk </b></td><td><input type=checkbox name=\"Lnk\" value=$id1 checked> 8<br><input type=checkbox name=\"Lnk\" value=$id2 > 42<br><input type=checkbox name=\"Lnk\" value=$id4 > 13<br><input type=checkbox name=\"Lnk\" value=$id5 > 77<br><input type=hidden name=\"Lnk\" value=do_edit></td></tr></table><input type=hidden name=\"_Table\" value=\"Test2\"></dl><input type=submit value=OK></from>");
 
 # Bring up the CGIReqEdit editor with the post with id 2
 require DBIx::HTMLView::CGIReqEdit;
-$post=$tab2->get(2);
+$post=$tab2->get($id22);
 $v=new DBIx::HTMLView::CGIReqEdit("View.cgi", $post);
-test ($v->view_html eq '<form method=POST action=View.cgi><dl><input type=hidden name=_Action value=update><table><tr><td valign=top><b>id </b></td><td>2<input type=hidden name="id" value="2"></td></tr><tr><td valign=top><b>str </b></td><td><input name="str" value="" size=20></td></tr><tr><td valign=top><b>nr </b></td><td><input name="nr" value="7" size=20></td></tr><tr><td valign=top><b>Lnk </b></td><td><input type=checkbox name="Lnk" value=0 checked> 8<br><input type=checkbox name="Lnk" value=1 checked> 42<br><input type=checkbox name="Lnk" value=3 checked> 13<br><input type=checkbox name="Lnk" value=4 > 77<br><input type=hidden name="Lnk" value=do_edit></td></tr></table><input type=hidden name="_Table" value="Test2"></dl><input type=submit value=OK></from>');
+test ($v->view_html eq "<form method=POST action=View.cgi><dl><input type=hidden name=_Action value=update><table><tr><td valign=top><b>id </b></td><td>$id22<input type=hidden name=\"id\" value=\"$id22\"></td></tr><tr><td valign=top><b>str </b></td><td><input name=\"str\" value=\"Another test post\" size=80></td></tr><tr><td valign=top><b>nr </b></td><td><input name=\"nr\" value=\"\" size=80></td></tr><tr><td valign=top><b>Lnk </b></td><td><input type=checkbox name=\"Lnk\" value=$id1 > 8<br><input type=checkbox name=\"Lnk\" value=$id2 > 42<br><input type=checkbox name=\"Lnk\" value=$id4 > 13<br><input type=checkbox name=\"Lnk\" value=$id5 > 77<br><input type=hidden name=\"Lnk\" value=do_edit></td></tr></table><input type=hidden name=\"_Table\" value=\"Test2\"></dl><input type=submit value=OK></from>");
 
-# Fake a CGI response make post with id 0 related to 42, 13 and with
+# Bring up the CGIReqEdit editor with the post with id 3
+require DBIx::HTMLView::CGIReqEdit;
+$post=$tab2->get($id23);
+$v=new DBIx::HTMLView::CGIReqEdit("View.cgi", $post);
+test ($v->view_html eq "<form method=POST action=View.cgi><dl><input type=hidden name=_Action value=update><table><tr><td valign=top><b>id </b></td><td>$id3<input type=hidden name=\"id\" value=\"$id3\"></td></tr><tr><td valign=top><b>str </b></td><td><input name=\"str\" value=\"\" size=80></td></tr><tr><td valign=top><b>nr </b></td><td><input name=\"nr\" value=\"7\" size=80></td></tr><tr><td valign=top><b>Lnk </b></td><td><input type=checkbox name=\"Lnk\" value=$id1 checked> 8<br><input type=checkbox name=\"Lnk\" value=$id2 checked> 42<br><input type=checkbox name=\"Lnk\" value=$id4 checked> 13<br><input type=checkbox name=\"Lnk\" value=$id5 > 77<br><input type=hidden name=\"Lnk\" value=do_edit></td></tr></table><input type=hidden name=\"_Table\" value=\"Test2\"></dl><input type=submit value=OK></from>");
+
+# Fake a CGI response make post with id 1 related to 42, 13 and with
 # nr set to 42 but without touching str
-$q=new CGI({'_Action'=>'update', 'id'=>0, 'nr'=>42, 
-						'Lnk'=>[1,3,'do_edit'], '_Table'=>'Test2'});
+$q=new CGI({'_Action'=>'update', 'id'=>$id21, 'nr'=>42, 
+						'Lnk'=>[$id2,$id4,'do_edit'], '_Table'=>'Test2'});
 $post=$dbi->tab($q->param('_Table'))->new_post($q);
 $post->update;
 
 # List table to check result
 test($tab2->list(undef, "order by id")->view_text eq 
-		 "id: 0\nstr: A test post\nnr: 42\nLnk: 42, 13\n\n".
-		 "id: 1\nstr: Another test post\nnr: \nLnk: \n\n".
-		 "id: 2\nstr: \nnr: 7\nLnk: 8, 42, 13\n\n");
+		 "id: $id21\nstr: A test post\nnr: 42\nLnk: 42, 13\n\n".
+		 "id: $id22\nstr: Another test post\nnr: \nLnk: \n\n".
+		 "id: $id23\nstr: \nnr: 7\nLnk: 8, 42, 13\n\n");
 
-# Fake a CGI response make post with id 2 related to no posts
-$q=new CGI({'_Action'=>'update', 'id'=>2,
+# Fake a CGI response make post with id 3 related to no posts
+$q=new CGI({'_Action'=>'update', 'id'=>$id23,
 						'Lnk'=>['do_edit'], '_Table'=>'Test2'});
 $post=$dbi->tab($q->param('_Table'))->new_post($q);
 $post->update;
 
 # List table to check result
 test($tab2->list(undef, "order by id")->view_text eq 
-		 "id: 0\nstr: A test post\nnr: 42\nLnk: 42, 13\n\n".
-		 "id: 1\nstr: Another test post\nnr: \nLnk: \n\n".
-		 "id: 2\nstr: \nnr: 7\nLnk: \n\n");
+		 "id: $id21\nstr: A test post\nnr: 42\nLnk: 42, 13\n\n".
+		 "id: $id22\nstr: Another test post\nnr: \nLnk: \n\n".
+		 "id: $id23\nstr: \nnr: 7\nLnk: \n\n");
 
-# Fake a CGI response seting nr to 7 of post with id 0
-$q=new CGI({'_Action'=>'update', 'id'=>0, 'nr'=>7,
+# Fake a CGI response seting nr to 7 of post with id 1
+$q=new CGI({'_Action'=>'update', 'id'=>$id21, 'nr'=>7,
 						'_Table'=>'Test2'});
 $post=$dbi->tab($q->param('_Table'))->new_post($q);
 $post->update;
 
 # List table to check result
 test($tab2->list(undef, "order by id")->view_text eq 
-		 "id: 0\nstr: A test post\nnr: 7\nLnk: 42, 13\n\n".
-		 "id: 1\nstr: Another test post\nnr: \nLnk: \n\n".
-		 "id: 2\nstr: \nnr: 7\nLnk: \n\n");
+		 "id: $id21\nstr: A test post\nnr: 7\nLnk: 42, 13\n\n".
+		 "id: $id22\nstr: Another test post\nnr: \nLnk: \n\n".
+		 "id: $id23\nstr: \nnr: 7\nLnk: \n\n");
 
-# Fake a CGI response to make post with id 2 related to 8,42
-$q=new CGI({'_Action'=>'update', 'id'=>2, 
-						'Lnk'=>[0,1,'do_edit'],'_Table'=>'Test2'});
+# Fake a CGI response to make post with id 3 related to 8,42
+$q=new CGI({'_Action'=>'update', 'id'=>$id23, 
+						'Lnk'=>[$id1,$id2,'do_edit'],'_Table'=>'Test2'});
 $post=$dbi->tab($q->param('_Table'))->new_post($q);
 $post->update;
 
 # List table to check result
 test($tab2->list(undef, "order by id")->view_text eq 
-		 "id: 0\nstr: A test post\nnr: 7\nLnk: 42, 13\n\n".
-		 "id: 1\nstr: Another test post\nnr: \nLnk: \n\n".
-		 "id: 2\nstr: \nnr: 7\nLnk: 8, 42\n\n");
+		 "id: $id21\nstr: A test post\nnr: 7\nLnk: 42, 13\n\n".
+		 "id: $id22\nstr: Another test post\nnr: \nLnk: \n\n".
+		 "id: $id23\nstr: \nnr: 7\nLnk: 8, 42\n\n");
+
+# Select on bool valuse and true edit returned post
+$post=$dbi->tab('Test3')->list("b1='Y' AND b2='0'")->first;
+$v=new DBIx::HTMLView::CGIReqEdit("View.cgi", $post);
+test($v->view_html eq "<form method=POST action=View.cgi><dl><input type=hidden name=_Action value=update><table><tr><td valign=top><b>id </b></td><td>$id33<input type=hidden name=\"id\" value=\"$id33\"></td></tr><tr><td valign=top><b>b1 </b></td><td><input type='radio' name='b1' value='Y' checked >Yes&nbsp;&nbsp;<input type='radio' name='b1' value='N' >No</td></tr><tr><td valign=top><b>b2 </b></td><td><input type='radio' name='b2' value='1'  >Sure&nbsp;&nbsp;<input type='radio' name='b2' value='0' checked>No way</td></tr><tr><td valign=top><b>s </b></td><td><input name=\"s\" value=\"hopp\" size=20></td></tr></table><input type=hidden name=\"_Table\" value=\"Test3\"></dl><input type=submit value=OK></from>");
 
 print "\nSelecting related data\n";
 $test_cnt=0;
 
 # List all posts related to posts with testf 42
 test($tab2->list("Lnk->testf=42", "order by Test2.id")->view_text eq 
-		 "id: 0\nstr: A test post\nnr: 7\nLnk: 42, 13\n\n".
-		 "id: 2\nstr: \nnr: 7\nLnk: 8, 42\n\n");
+		 "id: $id21\nstr: A test post\nnr: 7\nLnk: 42, 13\n\n".
+		 "id: $id23\nstr: \nnr: 7\nLnk: 8, 42\n\n");
 
 # List all posts related to posts with testf 13 or 8
 test($tab2->list("Lnk->testf=13 OR Lnk->testf=8", 
 								 "order by Test2.id")->view_text eq 
-		 "id: 0\nstr: A test post\nnr: 7\nLnk: 42, 13\n\n".
-		 "id: 2\nstr: \nnr: 7\nLnk: 8, 42\n\n");
+		 "id: $id21\nstr: A test post\nnr: 7\nLnk: 42, 13\n\n".
+		 "id: $id23\nstr: \nnr: 7\nLnk: 8, 42\n\n");
 
 # Relate $post2 to testf 77
-$post2->set('Lnk', [4]);
+$post2->set('Lnk', [$id5]);
 $post2->update;
 
 # List all posts related to posts with testf 77 or nr 7 and lnk 13
 test($tab2->list("Lnk->testf=77 OR (nr=7 AND Lnk->testf=13)", 
 								 "order by Test2.id")->view_text eq 
-		 "id: 0\nstr: A test post\nnr: 7\nLnk: 42, 13\n\n".
-		 "id: 1\nstr: Another test post\nnr: \nLnk: 77\n\n");
+		 "id: $id21\nstr: A test post\nnr: 7\nLnk: 42, 13\n\n".
+		 "id: $id22\nstr: Another test post\nnr: \nLnk: 77\n\n");
 
 # List all posts related to posts with testf 13 and 42
 #test($tab2->list("Lnk->testf=13 AND Lnk->testf=42", 
@@ -370,3 +420,5 @@ sub test {
 	}
 }
 #  LocalWords:  ListView's sql nstr nnr nLnk
+
+# Bool, Modified bool, modified sql size, modified edit size

@@ -1,3 +1,20 @@
+0.5
+ * View.cgi now optionally asks for username and passwords which are passed 
+   on to the database server. With the mySQL access system this allows you
+   to apply access restrictions on Database, Table or Field basis.
+ * Added a rows method to PostSet reporting the number of rows matched.
+ * Made quite some additional parameters customizable by the $data hash in 
+   the Fld constructor including display and store values for Bool, the sql
+   sizes and types of all flds, the sizes of <input ...> boxes.
+ * Splited the DB object into msqlDB and mysqlDB (the HTMLView::DB method 
+   points to msqlDB for backwards compatibility).
+ * Applied some chnages by Richard Braakman <dark@xs4all.nl> that:
+   - Fixed up the docs with quite some spell corrections
+   - Made sure that the field data is propperly escaped both in the html 
+     forms and the sql requests.
+   - Added a Bool Fld
+   - Added a mysqlDB class for using mySQL database engines.
+
 0.4 
   The interface has been rearrange into a more natural structure, based
   on DB, Table, Post, Field ... objects instead of just a bunch of

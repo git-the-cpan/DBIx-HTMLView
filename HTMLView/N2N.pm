@@ -449,12 +449,19 @@ sub del {
 
 =head2 $fld->name_vals
 
-Updates the link table and returns a empthy array as no fields in the
-from table should be modifed.
+Returns an empthy array as no fields in the from table should be modifed.
 
 =cut
 
-sub name_vals {
+sub name_vals {();}
+
+=head2 $fld->post_updated
+
+Updates the relation data in the db.
+
+=cut
+
+sub post_updated {
 	my $self=shift;
 
 	if ($self->got_post_set) {
@@ -472,7 +479,7 @@ sub name_vals {
 		}
 	}
 		
-	();
+	
 }
 
 =head2 $fld->sql_data($sel, $sub)

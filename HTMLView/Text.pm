@@ -80,7 +80,7 @@ Returns the height in characres of the default edit_html editor.
 sub height {
 	my $self=shift;
 	if (!$self->got_data('height')) {
-		return 50;
+		return 10;
 	} else {
 		return $self->data('height');
 	}
@@ -95,6 +95,6 @@ sub edit_html {
 	' name="'.$self->name.'">'.$val.'</textarea>'
 }
 
-sub sql_create {"CHAR(500)"}
+sub sql_create {my $self=shift;$self->db->sql_type("Text",$self)}
 
 1;

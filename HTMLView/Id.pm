@@ -64,3 +64,6 @@ sub edit_html {
 		return "";
 	}
 }
+
+# FIXME: Make all Flds pass on ther $self vars like this
+sub sql_create {my $self=shift; $self->db->sql_type("Id",$self)}

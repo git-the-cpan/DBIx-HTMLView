@@ -28,12 +28,12 @@
 
 =head1 DESCRIPTION
 
-Those objects are used to represent the fields and relations of a
+These objects are used to represent the fields and relations of a
 table inside the and the DBIx::HTMLView::Table object as well as the
 data contained in those fields and relations in the
 DBIx::HTMLView::Post objects.
 
-This is the base class of all such field classes such as
+This is the base class of all field classes such as
 DBIx::HTMLView::Text DBIx::HTMLView::Str and DBIx::HTMLView::Int as
 well as the relations such as DBIx::HTMLView::N2N.
 
@@ -52,16 +52,22 @@ DBIx::HTMLView::Table objects of the top level description of the
 databse (se DBIx::HTMLView::DB). And in that case it is the first
 version of the constructor you use preferable through the shortcuts in
 DBIx::HTMLView. $name is a string naming the relation or field while
-$data is a hashref with parameters specifik to the field or relation
-kind used.
+$data is a hashref with parameters specific to the field or relation
+kind used. There are a few parameters that are common though:
+
+sql_size - The size to be used to store this in the database, eg the 
+  value 100 in the sql type definition CHAR(100).
+sql_type - Allows you to overide the database specific default type to 
+  use for a fld. If this is defined it will be used as sql type for 
+  this fld.
 
 The second version of the constructor is used by the
-DBIx::HTMLView::Table class when it creates copies of it's flds, gives
-them there data $val and places them in a post. $tab is the
+DBIx::HTMLView::Table class when it creates copies of its flds, gives
+them their data $val and places them in a post. $tab is the
 DBIx::HTMLView::Table object the fld belongs to.
 
 For fields data ($val) is specified as a string or as the first item
-of a array referenced to by $val. Relations are represented as a
+of an array referenced to by $val. Relations are represented as a
 reference to an array of the id's of the posts being related to.
 
 =cut
@@ -128,7 +134,7 @@ sub got_data {
 
 =head2 $fld->set_tab($tab)
 
-Used by DBIx::HTMLView::Tale to inform the fld of which table it belongs
+Used by DBIx::HTMLView::Table to inform the fld of which table it belongs
 to. All fld belongs to either a Table or a Post.
 
 =cut
@@ -141,7 +147,7 @@ sub set_table {
 
 =head2 $fld->set_post($post)
 
-Used of DBIx::HTMLView::Post to inform the fld pf which post it belongs 
+Used by DBIx::HTMLView::Post to inform the fld pf which post it belongs 
 to. All fld belongs to either a Table or a Post.
 
 =cut
@@ -163,6 +169,17 @@ sub tab {
 	$self->{'tab'};
 }
 
+=head2 $fld->db
+
+Return the DBIx::HTMLView::Db object this fld belongs to.
+
+=cut
+
+sub db {
+	my $self=shift;
+	confess "Table not defined!" if (!defined $self->{'tab'});
+	$self->tab->db;
+}
 
 =head2 $fld->post
 
@@ -181,21 +198,21 @@ sub post {
 =head1 VIRTUAL METHODS
 
 Those methods are not defined in this class, but are suposed to be
-defiened in all leav fld classes.
+defined in all fld subclasses.
 
 =head2 $fld->view_html
 
-Returns a html string used to view the contenets (value) of the fld.
+Returns a html string used to display the contents (value) of the fld.
 
 =head2 $fld->edit_html
 
-Returns a string that can be placed inside a html <form> section used
+Returns a string that can be placed inside an html <form> section used
 to edit this field or relation. It will be some sort of input tag with
 the same name as the fld.
 
 =head2 $fld->sql_data($sel)
 
-Called if this fld is used in the selection string in a DBIx::HTMLView::Selection object $sel. It is supposed to add apropreate data to the object using $sel->add_fld and $sel->add_tab (se the DBIx::HTMLView::Selection manpage for details) and return the string to represent it in the where clause (it will usualy be the name of the field itself).
+Called if this fld is used in the selection string in a DBIx::HTMLView::Selection object $sel. It is supposed to add apropriate data to the object using $sel->add_fld and $sel->add_tab (se the DBIx::HTMLView::Selection manpage for details) and return the string to represent it in the where clause (it will usualy be the name of the field itself).
 
 =head2 $fld->view_text
 
@@ -218,11 +235,13 @@ of the field.
 
 =head2 $fld->name_vals
 
-This medthod is called whenever the data of a post is updated in the
-actuall database or a new post is added. It is supposed to return an
-array of hashes containing the two keys name and val. Where the value
-of the name keys are the names of database fields that is supposed to
-be set to the values of the val keys.
+This medthod is called whenever the data of a post are updated in the
+actual database or a new post is added. It returns an
+array of hashes containing the two keys name and val.  Where the value
+of the name keys are the names of database fields that are supposed to
+be set to the values of the val keys.  e.g.
+return ( {'name' => 'Color', 'value' => 'Red'}, 
+    {'name' => 'Size', 'value' => 'XXL'} );
 
 This is the method where relations are supposed to update all
 secondary tabels (eg the tables used to represent the actuall
@@ -233,7 +252,7 @@ relations).
 Will send the nesesery SQL commands to create this fld in database and
 return the sql type (if any) of this field to be included in the
 CREATE clause for the main table. That is normal fields will only
-return there type while relations will create it's link table.
+return their type while relations will create it's link table.
 
 =cut
 

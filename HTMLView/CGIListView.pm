@@ -124,6 +124,10 @@ sub view_html {
 EOF
 
 	$res .= "<form method=POST action=\"$script\">";
+	my $data = $self->form_data;
+	$data =~ s/<input type=hidden name="_Table" value="[^\"]+">//;
+  $res.=$data;
+
   if (defined $self->{'restrict_tabs'}) {
   	foreach (@{$self->{'restrict_tabs'}}) {
   	  $res .= '<input type=submit name=_Table value="' . $_ . '">';

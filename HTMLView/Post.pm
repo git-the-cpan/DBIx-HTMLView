@@ -35,7 +35,7 @@
 
 =head1 DESCRIPTION
 
-This object represenets a single post in a specifik table in the
+This object represents a single post in a specific table in the
 database. It has methods to view post as well as to modify it's data
 and to reflect those modifications in the database.
 
@@ -47,11 +47,11 @@ use Carp;
 
 =head2 $post=DBIx::HTMLView::Post->new($tab, $data, $sth)
 
-Creats a new post belonging to the table $tab (a DBIx::HTMLview::Table
+Creates a new post belonging to the table $tab (a DBIx::HTMLview::Table
 object). $data and $sth is used to initiale the post with it's fields,
 which can be done in several ways:
 
-1. To create a new empthy post with no data set, simply don't specify 
+1. To create a new empty post with no data set, simply don't specify 
    those arguments.
 2. If $data is an array reference, $sth is supposed to be the object 
    returned by a DBI execude call with a select command, and $data should 
@@ -125,6 +125,7 @@ reference to an array of the id's of the posts being related to.
 
 sub set {
 	my ($self, $fld, $val)=@_;
+
 	if (!UNIVERSAL::isa($val,'DBIx::HTMLView::Fld')) {
 		$val=$self->tab->new_fld($fld,$val);
 	}
@@ -259,7 +260,7 @@ Updates the database with the data found in this object or creats a new post in 
 
 =cut
 
-#FIXME: Make sure the new id we get are assign porperly to this object
+#FIXME: Make sure the new id we get are assigned properly to this object
 #       as well 
 sub update {
 	my $self=shift;

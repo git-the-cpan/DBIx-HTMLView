@@ -45,7 +45,7 @@ require DBIx::HTMLView::Field;
 
 sub name_vals {
 	my $self=shift;
-	({name=>$self->name, val=>$self->val});
+	({name=>$self->name, val=> $self->val });
 }
 
-sub sql_create {"INT"}
+sub sql_create {my $self=shift;$self->db->sql_type("Int",$self)}

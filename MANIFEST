@@ -25,3 +25,6 @@ HTMLView/Selection.pm
 HTMLView/Str.pm
 HTMLView/Table.pm
 HTMLView/Text.pm
+HTMLView/mysqlDB.pm
+HTMLView/msqlDB.pm
+HTMLView/Bool.pm

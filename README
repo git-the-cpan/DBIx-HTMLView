@@ -32,7 +32,7 @@ Build and Install
 All you have to do to build, test and install this stuff, if your
 connected to the Internet, is:
 
-perl Makefile.pl
+perl Makefile.PL
 make
 make test
 make install
@@ -40,6 +40,10 @@ make install
 This will run the tests on a remote server so if you're not connected
 they will fail. Se the config.pm file on how to set up a local db in
 that case.
+
+The test uses a mSQL database which means that you'll need DBD::mSQL
+in order to run them. You should be able to use this system with other 
+database engines as well and in that case you'll need there DBD's.
 
 Usage Overview
 --------------

@@ -44,7 +44,7 @@ use vars qw(@ISA);
 require DBIx::HTMLView::CGIView;
 @ISA = qw(DBIx::HTMLView::CGIView);
 
-=head2 $view=DBIx::HTMLView::CGIReqEdit->new($script, $post, $read_only)
+=head2 $view=DBIx::HTMLView::CGIReqEdit->new($script, $post, $read_only, $cgi)
 
 Creats a new post editor to edit the post $post (a
 DBIx::HTMLView::Post object. $read_only should be a regular expretion
@@ -63,10 +63,11 @@ sub new {
 	my $class = ref($this) || $this;
 	my $self=       bless {}, $class;
 
-	my ($script,$post,$read_only)=@_;
+	my ($script,$post,$read_only,$cgi)=@_;
   die "$post is not a DBIx::HTMLView::Post!" if (!$post->isa('DBIx::HTMLView::Post'));
   $self->{'script'}=$script;
 	$self->{'post'}=$post;
+	$self->{'cgi'}=$cgi;
   if (defined $read_only) {
     $self->{'read_only'}=$read_only;
   } else {
