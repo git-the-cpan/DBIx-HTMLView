@@ -23,19 +23,22 @@
 
 =head1 SYNOPSIS
 
-require DBIx::HTMLView;
+use DBIx::HTMLView;
+use CGI;
 
-# Initiate interface object
-my $v=new HTMLView($db, {});
-$v->InitDB($table);
+my $table="Test";
+my $v=new DBIx::HTMLView("DBI:mSQL:HTMLViewTester:athena.af.lu.se:1114", {});
+$v->SetParam("_Table", $table);
+$v->InitDb($table);
 
 # Preform the actions requested by the user
-$v->Preform($form);
+$v->Preform(new CGI);
 
 # Generate list content of $table in a html table
 print "<table>\n";
 foreach ($v->List("SELECT * FROM $table",'<td>')) { 
-	print "<tr>" . $v->ml("CGIReq.cgi", $_->[0], "Show") . "</tr>\n";
+	print "<tr><td>$_->[1]<td>";
+	print "<tr>" . $v->ml("View.cgi", $_->[0], "Show") . "</tr>\n";
 }
 print "</table>\n";
 
@@ -58,7 +61,7 @@ and usergroups like this:
 
       Users                 Groups
 	
-	|uid |Name  |       |gid |Group     |
+	|id  |Name  |       |id  |Group     |
 	+----+------+       +----+----------+
 	|0   |root  |       |0   |Superuser |
 	|1   |jhon  |       |1   |Webauthor |
@@ -94,7 +97,7 @@ there is a set of methods handling them which could changed by
 subclassing and overridon those. The methods are:
 
   GetIndex - Returns the colum name for the unquire id 
-  NextId   - Returns a new unquire value that could be used in a new post
+  Insert - Insert a new post and returns it's index
 
 See the detailed method descriptions below for more info.
 
@@ -109,7 +112,7 @@ As for mSQL the index field has to be called id and defined as "INT NOT
 NULL" in the "CREATE TABLE" request, 
 and that the table contains a sequence (eg "CREATE SEQUENCE ...") from 
 which values are retreved to the index. Is is also adviceable to make an
-index out of the id, eg "CREATE UNIQUE  INDEX idx1 ON Users(uid)", to 
+index out of the id, eg "CREATE UNIQUE  INDEX idx1 ON Users(id)", to 
 speed up the database handling, but HTMLView will probabably work anyway.
 
 =head1 METHODS
@@ -119,14 +122,13 @@ speed up the database handling, but HTMLView will probabably work anyway.
 package DBIx::HTMLView;
 use DBI;
 
-$VERSION="0.1";
+$VERSION="0.2";
 
-use Data::Dumper;
-
-=head2 $v=new HTMLView($db, $fmt);
+=head2 $v=new DBIx::HTMLView($db, $fmt);
 
 Creates a new HTMLView interface object representing the database $db,
-which should be a DBI database specification. The second argument is a
+which should be a DBI database specification (the string passed as first 
+argument to DBI->connect). The second argument is a
 hash defining how the fields of each table should be editied and which 
 relations there are beteen the tabels. It could be as simple as {}, 
 then all fields will be edited using the default <input ...> tag.
@@ -165,9 +167,10 @@ currently supports the following editor types:
 	long.
   
 The example also declears an N2N relation between the two tabels using 
-the UsersGroups table for the links and is is the Group field in the 
-Groups table that will be listed when should the related post. ViewVars
-can contain several variable names separated by , and or spaces.
+the UsersGroups table for the links and it is the Group field in the 
+Groups table that will be listed in the list of groups shown when 
+editing a post from the user table. ViewVars can contain several 
+variable names separated by , and or spaces.
 
 "N2N Relation":s are the only kind supported right now.
 
@@ -285,7 +288,6 @@ sub InitDb {
 	my $self=shift;
 	$self->{'table'}=shift;
 	
-	# This should be in new but contains to much magic to be stored in a session
 	$self->{'dbh'}=DBI->connect($self->{'Db'}, "", "");
 	if(!$self->{'dbh'}) {die "DBI->connect failed on " . $self->{'Db'}}
 	
@@ -293,6 +295,12 @@ sub InitDb {
 	$self->{'index'}=$self->GetIndex($self->{'table'});
 	
 	# Get hold of colum names
+  # This is a nasty litte hack:) I needed a database independed way to
+	# get hold of all field names, so I make a SELECT query that matches 
+	# nothing and asks for all variabels. That should return the variable 
+  # names and no data... (selecting on 0=1 or alike as sugestied by the
+  # mySQL people does not work on mSQL servers)
+
 	$sth = $self->SendCMD("SELECT * FROM ".$self->{'table'}." WHERE $self->{'index'}=-1");
 
 	$self->{'names'} = $sth->{'NAME'};
@@ -339,8 +347,8 @@ sub List {
 	my @ret;
 	
 	while (my $ref = $sth->fetchrow_arrayref) {
-		my $row="";
-		for(my $i=1; $i<=$#$ref; $i++){$row.=$join.$$ref[$i];}
+		my $row=$$ref[1];
+		for(my $i=2; $i<=$#$ref; $i++){$row.=$join.$$ref[$i];}
 		push @ret, [$ref->[0], $row];
 	}
 	
@@ -392,7 +400,7 @@ sub Get {
 Will return an HTML string viewing the $key field with value $val. $key 
 is looked up as a field-/relation-name in the fmt specifed in the 
 constructor to decide how that data should be retrived (in the case of
-a relation) and view.
+a relation) and viewed.
 
 =cut
 
@@ -439,6 +447,8 @@ sub DataTable {
 	my $res="\n<table>\n";
 	my @n=@{$self->{'names'}};
 	my $id;
+
+
 
 	for(my $i=0; $i<=$#n; $i++){
 		if (($n[$i] eq $self->{'index'})) {
@@ -560,7 +570,7 @@ and Mailuser (gid=2).
 Relations not mentioned at all will not be modified. The presents a 
 problem if you want to clear out all connections in a relation (eg remmove
 root from all groups). For this you'll have to use the speciall key 
-"_<RelationName>-Clr" (eg _Group-Clr). If this key will have no efect if
+"_<RelationName>-Clr" (eg _Group-Clr). This key will have no efect if
 specifed together with a set of "_<RelationName>-#" key, eg the specified
 connections will be made.
 
@@ -678,5 +688,10 @@ sub ParamStr {
 	$str;
 }
 
+=head1 Author
+
+  Hakan Ardo <hakan@debian.org>
+
+=cut
 
 1;

@@ -38,7 +38,8 @@ quite powerfull cgi based editor.
 
 Se the documentation for DBIx::HTMLView for a more detailed 
 description and the docs on the sub class to find the properties of
-the diffrent editors.
+the diffrent editors. There is also a QuickStart tutorial that step 
+by step takes you through the creation of a database.
 
 To use this with your databases you need a DBI interface to your 
 database. DBI can be found at CPAN together with a driver located 

@@ -23,13 +23,12 @@
 
 =head1 SYNOPSIS
 
-require DBIx::HTMLView::CGIListView;
-my @tabels = ("Users", "Groups");
+use DBIx::HTMLView::CGIListView;
+my @tabels = ("Test", "Test2");
+my $db="DBI:mSQL:HTMLViewTester:athena.af.lu.se:1114";
 
-$c=new DBIx::HTMLView::CGIListView($db, {}, \@tabels, new CGI)
+$c=new DBIx::HTMLView::CGIListView($db, {}, new CGI(), \@tabels);
 $c->PrintPage("this_file.cgi");
-
-FIXME: Spell...
 
 =head1 DESCRIPTION
 
@@ -37,8 +36,6 @@ This is a CGI interface based on the CGIView class (eg a subclass of) that
 allows you to select one table from a list at the top and lists the posts of
 that table at the botton with Show, Edit and Delete buttons for every line
 and below that a Add button allowing you to add new posts.
-
-Most of it's properties can be customized by subclassing it and overrding.
 
 =head1 METHODS
 
@@ -53,9 +50,9 @@ use DBIx::HTMLView::CGIView;
 =head1 $c=new DBIx::HTMLView::CGIListView($db, $fmt, $query, $tabs)
 
 Initiats the viewer. $db and $fmt is the database specifier and format
-specification as descriped in the DBIx::HTMLView manual. $tabs is an
-array reference to an array listing the table that should show up in
-list at the top. $query is the cgi query as returned by "new CGI;".
+specification as descriped in the DBIx::HTMLView manual. $query is the 
+cgi query as returned by "new CGI;". $tabs is an array reference to an 
+array listing the table that should show up in list at the top. 
 
 
 =cut
@@ -84,6 +81,9 @@ possible to chnage the contents of the list before calling this by chnaging
 the $self->{'Lst'} variable to a diffrent select query, before calling this
 method. The query has to select the table id as it's first variable. All 
 other selected variables will be displayed in the list.
+
+This method will also preform any Add, Change or Delete requests as made by 
+the CGIReqView interface.
 
 =cut
 

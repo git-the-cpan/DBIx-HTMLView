@@ -57,8 +57,8 @@ $res= <<"EOF";
 
 <hr>
 <table>
-<tr><td><td>7<td><a href="View.cgi?_Show=1&_Id=0&_Table=Test">Show</a><a href="View.cgi?_Edit=1&_Id=0&_Table=Test">Edit</a><a href="View.cgi?_Delete=1&_Id=0&_Table=Test">Delete</a></tr>
-<tr><td><td>42<td><a href="View.cgi?_Show=1&_Id=1&_Table=Test">Show</a><a href="View.cgi?_Edit=1&_Id=1&_Table=Test">Edit</a><a href="View.cgi?_Delete=1&_Id=1&_Table=Test">Delete</a></tr>
+<tr><td>7<td><a href="View.cgi?_Show=1&_Id=0&_Table=Test">Show</a><a href="View.cgi?_Edit=1&_Id=0&_Table=Test">Edit</a><a href="View.cgi?_Delete=1&_Id=0&_Table=Test">Delete</a></tr>
+<tr><td>42<td><a href="View.cgi?_Show=1&_Id=1&_Table=Test">Show</a><a href="View.cgi?_Edit=1&_Id=1&_Table=Test">Edit</a><a href="View.cgi?_Delete=1&_Id=1&_Table=Test">Delete</a></tr>
 </table>
 <a href="View.cgi?_New=1&_Id=-1&_Table=Test">New</a>
 </body></html>

@@ -1,2 +1,8 @@
 * Password authentication
 * Diffrent access rights (not all fields/tables editable by everyone)
+* Post locking
+* List methods that might have to be changed if using a diffrent DBD
+* Extend QuickStart tutorial
+
+
+

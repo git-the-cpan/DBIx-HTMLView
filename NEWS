@@ -1,2 +1,11 @@
+0.2
+  * Wrote a QuickStart tutorial taking you through the first steps of 
+    setting up an database interface.
+  * Made sure all the SYNOPSIS code and the View.cgi script runs as they 
+    are (that is they contain working example databse names).
+  * Corrected some old out of date statements in the docs as reported by 
+    Ronald Emaus <Ronald.Emaus@wl.com>.
+  * Cleand up the docs
+	* Some code cleanup and bugfixes
 0.1
   * First public release.

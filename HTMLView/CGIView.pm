@@ -29,17 +29,36 @@ use DBIx::HTMLView::CGIView;
 @ISA = ("DBIx::HTMLView::CGIView");
 
 sub new {
-	my ($class,$db,$fmt,$table)=@_;
-	my $self  = $class->SUPER::new($db,$fmt);
-	my $table=$self->{'Form'}->{'_Table'};
+	my ($class,$db,$fmt,$query)=@_;
+	my $self  = $class->SUPER::new($db,$fmt,$query);
 
-	$self->SetParam("_Table", $table);
+  my $table=$self->{'Form'}{'_Table'};
 	$self->InitDb($table);
 
 	return $self;
 }
 
+
+sub PrintPage {
+	my ($self, $script) =@_;
+
+	# Generate page...
+  foreach ($self->List("SELECT * FROM $self->{'Form'}{'_Table'}",', ')) { 
+	  print "$_->[1]: ". $self->ml($script, $_->[0], "Show") . "<br>\n";
+  }
+
+  $self->Foot();
+}
+
 # Overriden and new methods follow here...
+
+# And then to test it
+use CGI;
+use MyCGIViewer;
+
+my $query=new CGI({'_Table' => 'Test'});
+my $db="DBI:mSQL:HTMLViewTester:athena.af.lu.se:1114";
+new MyCGIViewer($db, {}, $query)->PrintPage("View.cgi");
 
 =head1 DESCRIPTION
 
@@ -56,12 +75,15 @@ use DBIx::HTMLView;
 @ISA = ("DBIx::HTMLView");
 
 
-=head2 $v=new DBIx::HTMLView::CGIView($db,$fmt);
+=head2 $v=new DBIx::HTMLView::CGIView($db,$fmt,$query);
 
 Creates a new CGIView object passing $db and $fmt to the DBIx::HTMLView
-constructor. It will also take care of the CGI input and place the 
-key/value pairs in a hash in $v->{'Form'}, and call the $v->Head method
-to generate the headder.
+constructor. It will also take care of the CGI input in $query, which 
+should be a new CGI object, and place the key/value pairs in a hash in 
+$v->{'Form'}, and call the $v->Head method to generate the headder.
+
+It also makes sure thet the current table in the _Table varibale in 
+$query is svaed in future calls by using SetParam.
 
 =cut
 
@@ -74,6 +96,7 @@ sub new {
 		$form->{$_}=$query->param($_);
 	}
 	$self->{'Form'}=$form;
+	$self->SetParam("_Table", $form->{'_Table'});
 
 	$self->Head;
 

@@ -23,36 +23,35 @@
 
 =head1 SYNOPSIS
 
-require DBIx::HTMLView::CGIReqView;
-require DBIx::HTMLView::CGIListView;
+use DBIx::HTMLView::CGIListView;
+use DBIx::HTMLView::CGIReqView;
+
+my $db="DBI:mSQL:HTMLViewTester:athena.af.lu.se:1114";
 
 $q = new CGI;
 if (DBIx::HTMLView::CGIReqView::Handles($q)) {
 	$v=new DBIx::HTMLView::CGIReqView($db, {}, $q);
 } else {
-	$v=new DBIx::HTMLView::CGIListView($db, {}, $q, \@tabels);
+  # Use some other view list CGIListView for example...
 }
 
-$v->PrintPage($script);
-
-
+$v->PrintPage("this_file.cgi");
 
 =head1 DESCRIPTION
 
 This is a CGI interface based on the CGIView class (eg a subclass of) that 
 allows you to edit or view one post in a table. Alla data is shown and all
-data except the key is editable, if the $self->{'editable'} variable not 
-is modified, in which case it should contain a regexp matching all editable
+data except the key is editable, if the $self->{'editable'} variable is 
+not modified, in which case it should contain a regexp matching all editable
 fields. It could be costruncted as "<field1>|<field2>|<field3>|...".
 
-By seting the _Add key a blank form will show upp for adding new posts. 
-By setting the key _Edit together with _Id, the vaule of _Id will be 
-looked up as the key of a post and that post will be presented for editing.
+By seting the _New key in the CGI query a blank form will show upp for 
+adding new posts. By setting the key _Edit together with _Id, the vaule 
+of _Id will be looked up as the key of a post and that post will be 
+presented for editing.
 
 Is is also possible to show a post by setting _Show and _Id. The value of 
-_Add, _Edit and _Show are never used and thereby on no importance.
-
-Most of it's properties can be customized by subclassing it and overriding.
+_New, _Edit and _Show are never used and thereby on no importance.
 
 =head1 METHODS
 
@@ -63,17 +62,7 @@ package DBIx::HTMLView::CGIReqView;
 use DBIx::HTMLView::CGIView;
 @ISA = ("DBIx::HTMLView::CGIView");
 
-=head1 $c=new DBIx::HTMLView::CGIListView($db, $fmt, $query, $tabs)
-
-Initiats the viewer. $db and $fmt is the database specifier and format
-specification as descriped in the DBIx::HTMLView manual. $tabs is an
-array reference to an array listing the table that should show up in
-list at the top. $query is the cgi query as returned by "new CGI;".
-
-
-=cut
-
-=head1 $c=new DBIx::HTMLView::CGIListView($db, $fmt, $query, $tabs)
+=head1 $c=new DBIx::HTMLView::CGIReqView($db, $fmt, $query)
 
 Initiats the viewer. $db and $fmt is the database specifier and format
 specification as descriped in the DBIx::HTMLView manual. $query is the 
@@ -86,7 +75,6 @@ sub new {
 	my $self  = $class->SUPER::new($db,$fmt,$query);
 	my $table=$self->{'Form'}->{'_Table'};
 
-	$self->SetParam("_Table", $table);
 	$self->InitDb($table);
 
 	$self->{'editable'}=".*";
@@ -111,7 +99,7 @@ sub PrintPage {
     print $v->View($form->{'_Id'}) . "\n";
   } else {
 	  print << "    EOF";
-    <form mathod=post action="$script">
+    <form method=post action="$script">
     <input type=hidden name="_Id" value="$form->{'_Id'}">
     <input type=hidden name="_Table" value="$form->{'_Table'}">
     EOF
@@ -130,7 +118,7 @@ sub PrintPage {
 =head1 DBIx::HTMLView::CGIReqView::Handles($q)
 
 Returns 1 if this object can handle the request make by $q, otherwise 0.
-$q should be an CGI objects as those created by "new CGI";
+$q should be an CGI object created with "new CGI";
 
 =cut
 

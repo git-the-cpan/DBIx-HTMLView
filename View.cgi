@@ -7,8 +7,8 @@ BEGIN {
 }
 
 # Config
-my @tabels = ("Artiklar", "Forfattare", "Kategorier");
-my $db="DBI:mSQL:Pub:athena.af.lu.se:1114";
+my @tabels = ("Test", "Test2");
+my $db="DBI:mSQL:HTMLViewTester:athena.af.lu.se:1114";
 my $script="View.cgi";
 
 require DBIx::HTMLView::CGIListView;
@@ -20,7 +20,5 @@ if (DBIx::HTMLView::CGIReqView::Handles($q)) {
 } else {
 	$v=new DBIx::HTMLView::CGIListView($db, {}, $q, \@tabels);
 }
-
-$v->{'editable'}="^Titel|Sokord|Ingress|Texten|Kategori|Fövrfattare\$";
 
 $v->PrintPage($script);
